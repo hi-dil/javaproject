@@ -87,19 +87,16 @@ public class Admin extends JFrame{
 
 
         // Adding the listeners to components..
-        submit.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String userName = userName_text.getText();
-                String password = password_text.getText();
-                if ((userName.equals(admin)) && (password.equals(adminpassword))) {
-                    message.setText(" Hello " + userName
-                            + "");
-                    menu();
-                    frame.setVisible(false);
-                } else {
-                    message.setText(" Invalid user.. ");
-                }
+        submit.addActionListener(e -> {
+            String userName = userName_text.getText();
+            String password = password_text.getText();
+            if ((userName.equals(admin)) && (password.equals(adminpassword))) {
+                message.setText(" Hello " + userName
+                        + "");
+                menu();
+                frame.setVisible(false);
+            } else {
+                message.setText(" Invalid user.. ");
             }
         });
 
@@ -140,12 +137,9 @@ public class Admin extends JFrame{
         panel1.add(northpanel, BorderLayout.NORTH);
         panel1.add(centerpanel, BorderLayout.CENTER);
 
-        addrecord.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addrecord();
-                frame1.setVisible(false);
-            }
+        addrecord.addActionListener(e -> {
+            addrecord();
+            frame1.setVisible(false);
         });
 
         frame1.add(panel1);
@@ -186,9 +180,9 @@ public class Admin extends JFrame{
         JTextField commonname_textfield = new JTextField();
         JTextField genus_textfield = new JTextField();
         JTextField species_textfield = new JTextField();
-        JTextArea stem_textarea = new JTextArea(6,20);
+        JTextArea stem_textarea = new JTextArea(6,30);
         JScrollPane scrollPane = new JScrollPane( stem_textarea );
-        JTextArea leaf_textarea = new JTextArea(6, 20);
+        JTextArea leaf_textarea = new JTextArea(6, 30);
         JScrollPane leafscroll = new JScrollPane(leaf_textarea);
 
         JButton back = new JButton("Back");
@@ -197,9 +191,9 @@ public class Admin extends JFrame{
 
         TitledBorder charac = new TitledBorder("Characteristics");
 
-        commonname_textfield.setPreferredSize(new Dimension(200, 20));
-        species_textfield.setPreferredSize(new Dimension(200, 20));
-        genus_textfield.setPreferredSize(new Dimension(200, 20));
+        commonname_textfield.setPreferredSize(new Dimension(300, 20));
+        species_textfield.setPreferredSize(new Dimension(300, 20));
+        genus_textfield.setPreferredSize(new Dimension(300, 20));
 
         stem_textarea.setLineWrap(true);
         stem_textarea.setWrapStyleWord(true);
@@ -207,34 +201,28 @@ public class Admin extends JFrame{
         leaf_textarea.setLineWrap(true);
         leaf_textarea.setWrapStyleWord(true);
 
-        back.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                menu();
-                frame2.setVisible(false);
-            }
+        back.addActionListener(e -> {
+            menu();
+            frame2.setVisible(false);
         });
 
-        browse.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // create an object of JFileChooser class
-                JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        browse.addActionListener(e -> {
+            // create an object of JFileChooser class
+            JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
 
-                // invoke the showsOpenDialog function to show the save dialog
-                int r = j.showOpenDialog(null);
+            // invoke the showsOpenDialog function to show the save dialog
+            int r = j.showOpenDialog(null);
 
-                // if the user selects a file
-                if (r == JFileChooser.APPROVE_OPTION)
+            // if the user selects a file
+            if (r == JFileChooser.APPROVE_OPTION)
 
-                {
-                    // set the label to the path of the selected file
-                    l.setText(j.getSelectedFile().getAbsolutePath());
-                }
-                // if the user cancelled the operation
-                else
-                    l.setText("the user cancelled the operation");
+            {
+                // set the label to the path of the selected file
+                l.setText(j.getSelectedFile().getAbsolutePath());
             }
+            // if the user cancelled the operation
+            else
+                l.setText("the user cancelled the operation");
         });
 
         c.gridx = 0;
@@ -355,7 +343,7 @@ public class Admin extends JFrame{
         panel2.add(southpanel, BorderLayout.SOUTH);
 
         frame2.add(panel2);
-        frame2.setSize(400, 800);
+        frame2.setSize(500, 800);
         frame2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame2.setLocationRelativeTo(null);
         frame2.setVisible(true);
