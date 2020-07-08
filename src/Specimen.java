@@ -111,4 +111,27 @@ public class Specimen extends Admin{
             JOptionPane.showMessageDialog(null, e);
         }
     }
+
+    public void updateRecord(int value, String commonName, String genus, String species, String photo, String stem, String leaf){
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            PreparedStatement stmt = myConn.prepareStatement("update specimen set commonname=?, genus=?, species=?, photo=?, stem=?, leaf=?" +
+                    "where specimenid = ?");
+            stmt.setString(1, commonName);
+            stmt.setString(2, genus);
+            stmt.setString(3, species);
+            stmt.setString(4, photo);
+            stmt.setString(5, stem);
+            stmt.setString(6, leaf);
+            stmt.setInt(7, value);
+
+            stmt.executeUpdate();
+
+            myConn.close();
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, e);
+        }
+    }
 }

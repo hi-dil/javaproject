@@ -1,6 +1,7 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileSystemView;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
@@ -12,8 +13,7 @@ public class Admin extends JFrame{
     String adminpassword = "admin";
     JTable table;
     JComboBox comboBox = new JComboBox();
-
-
+    final String[] recordvalue = new String[6];
 
 
     public ArrayList<Specimen> specimenList() {
@@ -360,17 +360,24 @@ public class Admin extends JFrame{
         panel.add(save);
 
         save.addActionListener(e -> {
-            String commonnameaction = commonnametextfield.getText();
-            String genusaction = gtextfield.getText();
-            String speciesaction = stextfield.getText();
-            String photolocation = l.getText();
-            String stemaction = stemtextarea.getText();
-            String leafaction = leafta.getText();
+            int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to add this record?", "Add Record",
+                    JOptionPane.OK_CANCEL_OPTION);
 
-            Specimen specimen = new Specimen();
-            specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+            if (input == 0){
+                String commonnameaction = commonnametextfield.getText();
+                String genusaction = gtextfield.getText();
+                String speciesaction = stextfield.getText();
+                String photolocation = l.getText();
+                String stemaction = stemtextarea.getText();
+                String leafaction = leafta.getText();
 
-            JOptionPane.showMessageDialog(null, "1 Data inserted");
+                Specimen specimen = new Specimen();
+                specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+
+                JOptionPane.showMessageDialog(null, "Record added!");
+            }
+
+
         });
 
         JButton back = new JButton("Back");
@@ -421,6 +428,10 @@ public class Admin extends JFrame{
             }
         });
 
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
+        table.setDefaultRenderer(String.class, centerRenderer);
+
         JButton back = new JButton("back");
         back.setBounds(571, 613, 98, 21);
         frame.getContentPane().add(back);
@@ -438,8 +449,9 @@ public class Admin extends JFrame{
     }
 
     public void editrecord(){
+
         JFrame frame = new JFrame();
-        frame.setBounds(100, 100, 983, 643);
+        frame.setBounds(100, 100, 348, 689);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel welcome = new JLabel("Please enter the details to add record");
@@ -451,7 +463,7 @@ public class Admin extends JFrame{
         panel.setLayout(null);
 
         JPanel panel_1 = new JPanel();
-        panel_1.setBounds(645, 10, 314, 152);
+        panel_1.setBounds(10, 52, 314, 152);
         panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel.add(panel_1);
         panel_1.setLayout(null);
@@ -460,9 +472,9 @@ public class Admin extends JFrame{
         commonnamelable.setBounds(6, 15, 146, 21);
         panel_1.add(commonnamelable);
 
-        JTextField stextfield = new JTextField();
+        JTextField stextfield = new JTextField(recordvalue[2]);
 
-        JTextField gtextfield = new JTextField();
+        JTextField gtextfield = new JTextField(recordvalue[1]);
         gtextfield.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -472,7 +484,7 @@ public class Admin extends JFrame{
                 }
             }});
 
-        JTextField commonnametextfield = new JTextField();
+        JTextField commonnametextfield = new JTextField(recordvalue[0]);
         commonnametextfield.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -502,7 +514,7 @@ public class Admin extends JFrame{
         Photo.setBounds(6, 107, 45, 13);
         panel_1.add(Photo);
 
-        JLabel l = new JLabel("no file selected");
+        JLabel l = new JLabel(recordvalue[3]);
         l.setBounds(107, 129, 106, 13);
 
         JButton btnNewButton = new JButton("browse");
@@ -537,7 +549,7 @@ public class Admin extends JFrame{
 
         JPanel panel_2 = new JPanel();
         panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(645, 172, 314, 265);
+        panel_2.setBounds(10, 214, 314, 265);
         panel.add(panel_2);
         panel_2.setLayout(null);
 
@@ -545,9 +557,9 @@ public class Admin extends JFrame{
         stemlable.setBounds(10, 62, 41, 13);
         panel_2.add(stemlable);
 
-        JTextArea leafta = new JTextArea();
+        JTextArea leafta = new JTextArea(recordvalue[5]);
 
-        JTextArea stemta = new JTextArea();
+        JTextArea stemta = new JTextArea(recordvalue[4]);
         stemta.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -578,7 +590,7 @@ public class Admin extends JFrame{
 
         JPanel panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_3.setBounds(645, 447, 311, 97);
+        panel_3.setBounds(10, 489, 311, 97);
         panel.add(panel_3);
         panel_3.setLayout(new GridLayout(0, 1, 0, 5));
 
@@ -594,45 +606,89 @@ public class Admin extends JFrame{
         JCheckBox chckbxNewCheckBox_2 = new JCheckBox("Sampling Event 3");
         panel_3.add(chckbxNewCheckBox_2);
 
-        JButton save = new JButton("Save");
-        save.setBounds(874, 554, 85, 21);
-        panel.add(save);
+        JButton update = new JButton("Update");
+        update.setBounds(229, 596, 85, 21);
+        panel.add(update);
+
+        update.addActionListener(e -> {
+            int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to update this record?", "Update Record",
+                    JOptionPane.OK_CANCEL_OPTION);
+
+            if (input==0){
+                int value = (int) comboBox.getSelectedItem();
+                String commonnameaction = commonnametextfield.getText();
+                String genusaction = gtextfield.getText();
+                String speciesaction = stextfield.getText();
+                String photolocation = l.getText();
+                String stemaction = stemta.getText();
+                String leafaction = leafta.getText();
+
+                Specimen specimen = new Specimen();
+                specimen.updateRecord(value, commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+
+                JOptionPane.showMessageDialog(null, "The record has been updated!");
+            }
+            else {
+                editrecord();
+                frame.setVisible(false);
+            }
+
+        });
 
         JButton back = new JButton("Back");
-        back.setBounds(779, 554, 85, 21);
+        back.setBounds(134, 596, 85, 21);
         panel.add(back);
+
+        comboBox = new JComboBox();
+        comboBox.setBounds(21, 21, 198, 21);
+        panel.add(comboBox);
+        updateCombo();
+
+        JButton apply = new JButton("Apply");
+        apply.setBounds(229, 21, 85, 21);
+        panel.add(apply);
+
+        apply.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int value = (int) comboBox.getSelectedItem();
+
+                try {
+                    Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                    PreparedStatement stmt = myConn.prepareStatement("select commonname, genus, species, photo, stem, leaf from specimen " +
+                            "where specimenid = ?");
+                    stmt.setInt(1, value);
+
+                    ResultSet resultSet = stmt.executeQuery();
+
+                    while(resultSet.next()){
+                        recordvalue[0] = resultSet.getString("commonname");
+                        recordvalue[1] = resultSet.getString("genus");
+                        recordvalue[2] = resultSet.getString("species");
+                        recordvalue[3] = resultSet.getString("photo");
+                        recordvalue[4] = resultSet.getString("stem");
+                        recordvalue[5] = resultSet.getString("leaf");
+                    }
+                    myConn.close();
+                    editrecord();
+                    frame.setVisible(false);
+
+                }
+                catch (Exception j){
+                    JOptionPane.showMessageDialog(null, j);
+                }
+            }
+        });
 
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
 
-        JPanel panel_4 = new JPanel();
-        panel_4.setBorder(new TitledBorder(null, "Records", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_4.setBounds(10, 10, 625, 534);
-        panel.add(panel_4);
-        panel_4.setLayout(null);
-
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setBounds(10, 30, 605, 494);
-        panel_4.add(scrollPane);
-
-        table = new JTable();
-        table.setModel(new DefaultTableModel(
-                new Object[][] {
-
-                },
-                new String[] {
-                        "RecordId", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
-                }
-        ));
-        scrollPane.setViewportView(table);
-        show_specimen();
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
-
 
 
 
@@ -762,6 +818,8 @@ public class Admin extends JFrame{
                         return columnTypes[columnIndex];
                     }
                 });
+
+                JOptionPane.showMessageDialog(null, "The record has been deleted!");
 
                 show_specimen();
                 deleteRecord();
