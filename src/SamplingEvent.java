@@ -1,6 +1,7 @@
 public class SamplingEvent {
     private int year, month, date, hrs, min;
     private String location;
+    private int samplingid;
 
     public SamplingEvent(int year, int month, int date, int hrs, int min, String location) {
         this.year = year;

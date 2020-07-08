@@ -4,13 +4,62 @@ import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.*;
 import java.util.ArrayList;
 
 public class Admin extends JFrame{
     String admin = "admin";
     String adminpassword = "admin";
+    JTable table;
+    JComboBox comboBox = new JComboBox();
 
 
+
+
+    public ArrayList<Specimen> specimenList() {
+        ArrayList<Specimen> specimenList = new ArrayList<>();
+
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            Statement statement = myConn.createStatement();
+
+            ResultSet resultSet = statement.executeQuery("select * from specimen");
+
+            Specimen specimen;
+            while(resultSet.next()){
+                specimen = new Specimen(resultSet.getInt("specimenId"), resultSet.getString("Commonname"),
+                        resultSet.getString("Genus"), resultSet.getString("Species"), resultSet.getString("Photo"),
+                        resultSet.getString("Stem"), resultSet.getString("Leaf"));
+
+                specimenList.add(specimen);
+            }
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, e);
+        }
+
+        return specimenList;
+    }
+
+
+    public void show_specimen() {
+        ArrayList<Specimen> list = specimenList();
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        Object[] row = new Object[7];
+
+        for(int i=0; i<list.size(); i++){
+            row[0] = list.get(i).getSpecimenId();
+            row[1] = list.get(i).getCommonName();
+            row[2] = list.get(i).getGenus();
+            row[3] = list.get(i).getSpecies();
+            row[4] = list.get(i).getPhoto();
+            row[5] = list.get(i).getStem();
+            row[6] = list.get(i).getLeaf();
+
+            model.addRow(row);
+        }
+    }
 
 
 
@@ -110,6 +159,11 @@ public class Admin extends JFrame{
         JButton deleteRecord = new JButton("Delete Record");
         deleteRecord.setBounds(80, 243, 193, 32);
         frame.getContentPane().add(deleteRecord);
+
+        deleteRecord.addActionListener(e -> {
+            deleteRecord();
+            frame.setVisible(false);
+        });
 
         JButton searchRecord = new JButton("Search Record");
         searchRecord.setBounds(80, 295, 193, 32);
@@ -263,6 +317,7 @@ public class Admin extends JFrame{
                 }
             }
         });
+        stemtextarea.setLineWrap(true);
         stemtextarea.setBounds(161, 41, 143, 97);
         panel_2.add(stemtextarea);
 
@@ -274,7 +329,7 @@ public class Admin extends JFrame{
         leaflable.setBounds(10, 186, 45, 13);
         panel_2.add(leaflable);
 
-
+        leafta.setLineWrap(true);
         leafta.setBounds(110, 147, 194, 97);
         panel_2.add(leafta);
 
@@ -312,8 +367,10 @@ public class Admin extends JFrame{
             String stemaction = stemtextarea.getText();
             String leafaction = leafta.getText();
 
-            specimenData(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+            Specimen specimen = new Specimen();
+            specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
 
+            JOptionPane.showMessageDialog(null, "1 Data inserted");
         });
 
         JButton back = new JButton("Back");
@@ -347,23 +404,13 @@ public class Admin extends JFrame{
         scrollPane.setBounds(10, 52, 1184, 540);
         frame.getContentPane().add(scrollPane);
 
-        JTable table = new JTable();
+        table = new JTable();
         scrollPane.setViewportView(table);
         table.setModel(new DefaultTableModel(
                 new Object[][] {
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null},
                 },
                 new String[] {
-                        "Common Name", "Genus", "Species", "Stem", "Leaf", "Time", "Date", "Location"
+                        "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
                 }
         ) {
             Class[] columnTypes = new Class[] {
@@ -383,6 +430,8 @@ public class Admin extends JFrame{
             mainmenu();
             frame.setVisible(false);
         });
+
+        show_specimen();
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
@@ -498,8 +547,8 @@ public class Admin extends JFrame{
 
         JTextArea leafta = new JTextArea();
 
-        JTextArea textArea = new JTextArea();
-        textArea.addKeyListener(new KeyAdapter() {
+        JTextArea stemta = new JTextArea();
+        stemta.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
@@ -507,10 +556,11 @@ public class Admin extends JFrame{
                     leafta.requestFocus();
                 }}
         });
-        textArea.setBounds(161, 41, 143, 97);
-        panel_2.add(textArea);
+        stemta.setLineWrap(true);
+        stemta.setBounds(161, 41, 143, 97);
+        panel_2.add(stemta);
 
-        JScrollPane stemscroll = new JScrollPane(textArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane stemscroll = new JScrollPane(stemta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         stemscroll.setBounds(110, 30, 194, 97);
         panel_2.add(stemscroll);
 
@@ -518,7 +568,7 @@ public class Admin extends JFrame{
         leaflable.setBounds(10, 186, 45, 13);
         panel_2.add(leaflable);
 
-
+        leafta.setLineWrap(true);
         leafta.setBounds(110, 147, 194, 97);
         panel_2.add(leafta);
 
@@ -567,21 +617,17 @@ public class Admin extends JFrame{
         scrollPane.setBounds(10, 30, 605, 494);
         panel_4.add(scrollPane);
 
-        JTable table = new JTable();
+        table = new JTable();
         table.setModel(new DefaultTableModel(
                 new Object[][] {
-                        {null, null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null, null},
-                        {null, null, null, null, null, null, null, null, null},
+
                 },
                 new String[] {
-                        "RecordId", "Common Name", "Genus", "Species", "Stem", "Leaf", "Time", "Date", "Location"
+                        "RecordId", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
                 }
         ));
         scrollPane.setViewportView(table);
+        show_specimen();
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
@@ -626,8 +672,123 @@ public class Admin extends JFrame{
         frame.setLocationRelativeTo(null);
     }
 
-    public void specimenData(String specimen, String genus, String species, String photo, String stem, String leaf){
-        Specimen sp1 = new Specimen(specimen, genus, species, photo, stem, leaf);
+
+
+    public void updateCombo(){
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            PreparedStatement pst = myConn.prepareStatement("select * from specimen");
+
+            ResultSet resultSet = pst.executeQuery();
+
+            while (resultSet.next())
+                comboBox.addItem(resultSet.getInt("specimenid"));
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, e);
+        }
+    }
+
+
+
+    public void deleteRecord() {
+        JFrame frame = new JFrame();
+        frame.setBounds(100, 100, 1079, 606);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.getContentPane().setLayout(null);
+
+        comboBox = new JComboBox();
+        comboBox.setBounds(31, 107, 255, 25);
+        frame.getContentPane().add(comboBox);
+
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setBounds(342, 10, 713, 549);
+        frame.getContentPane().add(scrollPane);
+
+        table = new JTable();
+        scrollPane.setViewportView(table);
+
+        table.setModel(new DefaultTableModel(
+                new Object[][] {
+                },
+                new String[] {
+                        "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
+                }
+        ) {
+            Class[] columnTypes = new Class[] {
+                    String.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class
+            };
+            public Class getColumnClass(int columnIndex) {
+                return columnTypes[columnIndex];
+            }
+        });
+
+        show_specimen();
+        updateCombo();
+
+        JLabel lblNewLabel = new JLabel("SpecimenId");
+        lblNewLabel.setBounds(31, 84, 92, 13);
+        frame.getContentPane().add(lblNewLabel);
+
+        JButton delete = new JButton("Delete");
+        delete.setBounds(201, 538, 85, 21);
+        frame.getContentPane().add(delete);
+
+        delete.addActionListener(e -> {
+            int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this record?", "Delete Record",
+                    JOptionPane.OK_CANCEL_OPTION);
+
+            if (input == 0){
+                int value = (int) comboBox.getSelectedItem();
+                Specimen specimen = new Specimen();
+
+                specimen.deleteRecord(value);
+
+                table = new JTable();
+                scrollPane.setViewportView(table);
+
+                table.setModel(new DefaultTableModel(
+                        new Object[][] {
+                        },
+                        new String[] {
+                                "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
+                        }
+                ) {
+                    Class[] columnTypes = new Class[] {
+                            String.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class
+                    };
+                    public Class getColumnClass(int columnIndex) {
+                        return columnTypes[columnIndex];
+                    }
+                });
+
+                show_specimen();
+                deleteRecord();
+                frame.setVisible(false);
+            }
+            else{
+                deleteRecord();
+                frame.setVisible(false);
+            }
+
+        });
+
+        JButton back = new JButton("Back");
+        back.setBounds(99, 538, 85, 21);
+        frame.getContentPane().add(back);
+
+        back.addActionListener(e -> {
+            mainmenu();
+            frame.setVisible(false);
+        });
+
+        JLabel lblNewLabel_1 = new JLabel("Please select specimenId to delete the said record");
+        lblNewLabel_1.setBounds(31, 10, 335, 41);
+        frame.getContentPane().add(lblNewLabel_1);
+
+        frame.setVisible(true);
+        frame.setLocationRelativeTo(null);
     }
 }
 
