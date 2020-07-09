@@ -27,6 +27,8 @@ public class Admin extends JFrame{
     int valuecombobox = 0;
     JTable tablesampling;
     String combosummary = "no filter";
+    String locationsearchtext = "";
+    String speciessearchtext = "";
 
     public ArrayList<Specimen> specimenList() {
         ArrayList<Specimen> specimenList = new ArrayList<>();
@@ -965,11 +967,95 @@ public class Admin extends JFrame{
         frame.setLocationRelativeTo(null);
     }
 
+    public ArrayList<SpecimenSamplingList> search() {
+        ArrayList<SpecimenSamplingList> searchList = new ArrayList<>();
+
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            ResultSet resultSet = null;
+
+            if(!speciessearchtext.isEmpty() && !locationsearchtext.isEmpty()) {
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                        "where specimenevent.location = ? and specimen.species = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, locationsearchtext);
+                statement.setString(2, speciessearchtext);
+
+                resultSet = statement.executeQuery();
+            }
+            else if(!speciessearchtext.isEmpty()){
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                "where specimen.species = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, speciessearchtext);
+
+
+                resultSet = statement.executeQuery();
+            }
+            else{
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                        "where specimenevent.location = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, locationsearchtext);
+
+
+                resultSet = statement.executeQuery();
+            }
+
+
+
+            SpecimenSamplingList specimenSampling;
+            while(resultSet.next()){
+                specimenSampling = new SpecimenSamplingList(resultSet.getString("location"), resultSet.getString("date"),
+                        resultSet.getString("time"), resultSet.getString("commonname"), resultSet.getString("genus"),
+                        resultSet.getString("species"), resultSet.getString("stem"), resultSet.getString("leaf"),
+                        resultSet.getInt("specimentakeid"), resultSet.getBytes("photo"));
+
+                searchList.add(specimenSampling);
+            }
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, "The data didn't exist in database");
+        }
+
+        return searchList;
+    }
+
+    public void showsearch() {
+        ArrayList<SpecimenSamplingList> list = search();
+        DefaultTableModel model = (DefaultTableModel) tablesampling.getModel();
+        Object[] row = new Object[9];
+
+        for (SpecimenSamplingList specimen : list) {
+            row[0] = specimen.getId();
+            row[1] = specimen.getCommonname();
+            row[2] = specimen.getGenus();
+            row[3] = specimen.getSpecies();
+            row[4] = specimen.getStem();
+            row[5] = specimen.getLeaf();
+            row[6] = specimen.getLocation();
+            row[7] = specimen.getDate();
+            row[8] = specimen.getTime();
+
+            model.addRow(row);
+        }
+    }
+
 
     //TODO: add functionalities to search record
     public void searchrecord(){
         JFrame frame = new JFrame();
-        frame.setBounds(100, 100, 638, 416);
+        frame.setBounds(100, 100, 1135, 614);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel lblNewLabel = new JLabel("Please enter what you want to search");
@@ -981,23 +1067,95 @@ public class Admin extends JFrame{
         frame.getContentPane().add(panel, BorderLayout.CENTER);
         panel.setLayout(null);
 
-        JTextField textField = new JTextField();
-        textField.setBounds(68, 24, 379, 19);
-        panel.add(textField);
-        textField.setColumns(10);
+        JTextField speciessearch = new JTextField();
+        speciessearch.setBounds(371, 24, 359, 19);
+        panel.add(speciessearch);
+        speciessearch.setColumns(10);
+
+        JTextField locationsearch = new JTextField();
+        locationsearch.setBounds(371, 50, 359, 19);
+        panel.add(locationsearch);
+        locationsearch.setColumns(10);
 
         JButton search = new JButton("Search");
-        search.setBounds(457, 23, 85, 21);
+        search.setBounds(744, 49, 85, 21);
+        search.addActionListener(e -> {
+            locationsearchtext = locationsearch.getText();
+            speciessearchtext = speciessearch.getText();
+
+            searchrecord();
+            frame.setVisible(false);
+
+        });
+
         panel.add(search);
 
         JButton back = new JButton("back");
-        back.setBounds(250, 313, 85, 21);
-        panel.add(back);
-
+        back.setBounds(526, 523, 85, 21);
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
+
+        panel.add(back);
+
+        JLabel species = new JLabel("Species");
+        species.setHorizontalAlignment(SwingConstants.RIGHT);
+        species.setBounds(297, 27, 64, 13);
+        panel.add(species);
+
+        JLabel location = new JLabel("Location");
+        location.setHorizontalAlignment(SwingConstants.RIGHT);
+        location.setBounds(297, 53, 64, 13);
+        panel.add(location);
+
+        JPanel panel_1 = new JPanel();
+        panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Record", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+        panel_1.setBounds(4, 76, 673, 441);
+        panel.add(panel_1);
+        panel_1.setLayout(null);
+
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setBounds(10, 15, 653, 416);
+        panel_1.add(scrollPane);
+
+        JPanel panel_2 = new JPanel();
+
+        imagesummary = new JLabel("");
+        imagesummary.setBounds(10, 22, 409, 405);
+        panel_2.add(imagesummary);
+
+        tablesampling = new JTable();
+
+        tablesampling.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int i = tablesampling.getSelectedRow();
+
+                byte[] img = (specimenSamplingList().get(i).getPhoto());
+                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagesummary.getWidth(), imagesummary.getHeight(), Image.SCALE_SMOOTH));
+                imagesummary.setIcon(imageIcon);
+            }
+        });
+
+        tablesampling.setModel(new DefaultTableModel(
+                new Object[][] {
+                },
+                new String[] {
+                        "ID", "Common Name", "Genus", "Species", "Stem", "Leaf", "Location", "Date", "Time"
+                }
+        ));
+        scrollPane.setViewportView(tablesampling);
+
+        panel_2.setBorder(new TitledBorder(null, "Photo", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_2.setBounds(688, 76, 429, 441);
+        panel.add(panel_2);
+        panel_2.setLayout(null);
+
+        if (!speciessearchtext.isEmpty() || !locationsearchtext.isEmpty()){
+            showsearch();
+        }
+
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
@@ -1205,8 +1363,6 @@ public class Admin extends JFrame{
         }
     }
 
-
-    //TODO: add functionalities to generate report
     public void generateSummary(){
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 1262, 504);
