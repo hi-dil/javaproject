@@ -1,3 +1,4 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
@@ -7,6 +8,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,11 +20,11 @@ public class Admin extends JFrame{
     String adminpassword = "admin";
     JTable table;
     JComboBox comboBox = new JComboBox();
-    final String[] recordvalue = new String[6];
-    JLabel imagelable, imagetable;
+    final String[] recordvalue = new String[5];
+    JLabel imagelable, imagetable, imageedit;
     byte[] specimenimage = null;
-
-
+    ImageIcon editimage;
+    int valuecombobox = 0;
 
     public ArrayList<Specimen> specimenList() {
         ArrayList<Specimen> specimenList = new ArrayList<>();
@@ -209,8 +211,6 @@ public class Admin extends JFrame{
         });
     }
 
-
-
     void addrecord(){
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 345, 775);
@@ -384,14 +384,14 @@ public class Admin extends JFrame{
         JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
         panel_3.add(lblNewLabel);
 
-        JCheckBox chckbxNewCheckBox = new JCheckBox("Sampling Event 1");
-        panel_3.add(chckbxNewCheckBox);
+        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
+        panel_3.add(samplingevent1);
 
-        JCheckBox chckbxNewCheckBox_1 = new JCheckBox("Sampling Event 2");
-        panel_3.add(chckbxNewCheckBox_1);
+        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
+        panel_3.add(samplingevent2);
 
-        JCheckBox chckbxNewCheckBox_2 = new JCheckBox("Sampling Event 3");
-        panel_3.add(chckbxNewCheckBox_2);
+        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
+        panel_3.add(samplingevent3);
 
         JButton save = new JButton("Save");
         save.setBounds(231, 694, 85, 21);
@@ -412,6 +412,41 @@ public class Admin extends JFrame{
                 Specimen specimen = new Specimen();
                 specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
 
+                int id = specimen.getSpecimenId();
+                Connection myConn = null;
+                try {
+                    myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+
+                    
+                    PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
+                            "values(?, ?)");
+
+                    if(samplingevent1.isSelected()){
+                        stmt.setInt(1, id);
+                        stmt.setInt(2, 1);
+                        stmt.executeUpdate();
+                    }
+
+                    if(samplingevent2.isSelected()){
+                        stmt.setInt(1, id);
+                        stmt.setInt(2, 2);
+                        stmt.executeUpdate();
+                    }
+
+                    if(samplingevent3.isSelected()){
+                        stmt.setInt(1, id);
+                        stmt.setInt(2, 3);
+                        stmt.executeUpdate();
+                    }
+
+                    myConn.close();
+
+                    
+
+                } catch (Exception ex){
+                    JOptionPane.showMessageDialog(null, ex);
+                }
+                
                 JOptionPane.showMessageDialog(null, "Record added!");
             }
 
@@ -514,10 +549,11 @@ public class Admin extends JFrame{
         frame.setLocationRelativeTo(null);
     }
 
+
     public void editrecord(){
 
         JFrame frame = new JFrame();
-        frame.setBounds(100, 100, 348, 689);
+        frame.setBounds(100, 100, 348, 771);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel welcome = new JLabel("Please enter the details to add record");
@@ -529,7 +565,7 @@ public class Admin extends JFrame{
         panel.setLayout(null);
 
         JPanel panel_1 = new JPanel();
-        panel_1.setBounds(10, 52, 314, 152);
+        panel_1.setBounds(10, 52, 314, 246);
         panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel.add(panel_1);
         panel_1.setLayout(null);
@@ -580,7 +616,7 @@ public class Admin extends JFrame{
         Photo.setBounds(6, 107, 45, 13);
         panel_1.add(Photo);
 
-        JLabel l = new JLabel(recordvalue[3]);
+        JLabel l = new JLabel();
         l.setBounds(107, 129, 106, 13);
 
         JButton btnNewButton = new JButton("browse");
@@ -613,9 +649,14 @@ public class Admin extends JFrame{
         panel_1.add(stextfield);
         stextfield.setColumns(10);
 
+        imageedit = new JLabel("");
+        imageedit.setIcon(editimage);
+        imageedit.setBounds(109, 129, 117, 107);
+        panel_1.add(imageedit);
+
         JPanel panel_2 = new JPanel();
         panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(10, 214, 314, 265);
+        panel_2.setBounds(10, 308, 314, 265);
         panel.add(panel_2);
         panel_2.setLayout(null);
 
@@ -623,9 +664,9 @@ public class Admin extends JFrame{
         stemlable.setBounds(10, 62, 41, 13);
         panel_2.add(stemlable);
 
-        JTextArea leafta = new JTextArea(recordvalue[5]);
+        JTextArea leafta = new JTextArea(recordvalue[4]);
 
-        JTextArea stemta = new JTextArea(recordvalue[4]);
+        JTextArea stemta = new JTextArea(recordvalue[3]);
         stemta.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -656,24 +697,24 @@ public class Admin extends JFrame{
 
         JPanel panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_3.setBounds(10, 489, 311, 97);
+        panel_3.setBounds(10, 583, 311, 97);
         panel.add(panel_3);
         panel_3.setLayout(new GridLayout(0, 1, 0, 5));
 
         JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
         panel_3.add(lblNewLabel);
 
-        JCheckBox chckbxNewCheckBox = new JCheckBox("Sampling Event 1");
-        panel_3.add(chckbxNewCheckBox);
+        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
+        panel_3.add(samplingevent1);
 
-        JCheckBox chckbxNewCheckBox_1 = new JCheckBox("Sampling Event 2");
-        panel_3.add(chckbxNewCheckBox_1);
+        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
+        panel_3.add(samplingevent2);
 
-        JCheckBox chckbxNewCheckBox_2 = new JCheckBox("Sampling Event 3");
-        panel_3.add(chckbxNewCheckBox_2);
+        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
+        panel_3.add(samplingevent3);
 
         JButton update = new JButton("Update");
-        update.setBounds(229, 596, 85, 21);
+        update.setBounds(229, 690, 85, 21);
         panel.add(update);
 
         update.addActionListener(e -> {
@@ -682,6 +723,24 @@ public class Admin extends JFrame{
 
             if (input==0){
                 int value = (int) comboBox.getSelectedItem();
+
+                if (!samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected()){
+                    System.out.println("nice one");
+                }
+                else{
+                    try{
+                        Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                        PreparedStatement stmt = myConn.prepareStatement("delete from specimentake where specimenid = ?");
+
+                        stmt.setInt(1, value);
+                        stmt.executeUpdate();
+                        myConn.close();
+                    }
+                    catch (Exception ex){
+                        JOptionPane.showMessageDialog(null, ex);
+                    }
+                }
+
                 String commonnameaction = commonnametextfield.getText();
                 String genusaction = gtextfield.getText();
                 String speciesaction = stextfield.getText();
@@ -693,6 +752,34 @@ public class Admin extends JFrame{
                 specimen.updateRecord(value, commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
 
                 JOptionPane.showMessageDialog(null, "The record has been updated!");
+
+                try{
+                    Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                    PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
+                            "values(?, ?)");
+
+                    if(samplingevent1.isSelected()){
+                        stmt.setInt(1, value);
+                        stmt.setInt(2, 1);
+                        stmt.executeUpdate();
+                    }
+
+                    if(samplingevent2.isSelected()){
+                        stmt.setInt(1, value);
+                        stmt.setInt(2, 2);
+                        stmt.executeUpdate();
+                    }
+
+                    if(samplingevent3.isSelected()){
+                        stmt.setInt(1, value);
+                        stmt.setInt(2, 3);
+                        stmt.executeUpdate();
+                    }
+                }
+                catch (Exception ex){
+                    JOptionPane.showMessageDialog(null, ex);
+                }
+
             }
             else {
                 editrecord();
@@ -702,10 +789,11 @@ public class Admin extends JFrame{
         });
 
         JButton back = new JButton("Back");
-        back.setBounds(134, 596, 85, 21);
+        back.setBounds(134, 690, 85, 21);
         panel.add(back);
 
         comboBox = new JComboBox();
+        //comboBox.setSelectedIndex(valuecombobox);
         comboBox.setBounds(21, 21, 198, 21);
         panel.add(comboBox);
         updateCombo();
@@ -718,6 +806,8 @@ public class Admin extends JFrame{
             @Override
             public void actionPerformed(ActionEvent e) {
                 int value = (int) comboBox.getSelectedItem();
+                valuecombobox = comboBox.getSelectedIndex();
+
 
                 try {
                     Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
@@ -731,9 +821,16 @@ public class Admin extends JFrame{
                         recordvalue[0] = resultSet.getString("commonname");
                         recordvalue[1] = resultSet.getString("genus");
                         recordvalue[2] = resultSet.getString("species");
-                        recordvalue[3] = resultSet.getString("photo");
-                        recordvalue[4] = resultSet.getString("stem");
-                        recordvalue[5] = resultSet.getString("leaf");
+                        recordvalue[3] = resultSet.getString("stem");
+                        recordvalue[4] = resultSet.getString("leaf");
+
+                        byte[] img = resultSet.getBytes("photo");
+                        ImageIcon image = new ImageIcon(img);
+                        Image im = image.getImage();
+                        Image myImg = im.getScaledInstance(imageedit.getWidth(), imageedit.getHeight(), Image.SCALE_SMOOTH);
+                        editimage = new ImageIcon(myImg);
+                        imageedit.setIcon(editimage);
+
                     }
                     myConn.close();
                     editrecord();
@@ -757,7 +854,7 @@ public class Admin extends JFrame{
     }
 
 
-
+    //TODO: add functionalities to search record
     public void searchrecord(){
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 638, 416);
@@ -795,7 +892,6 @@ public class Admin extends JFrame{
     }
 
 
-
     public void updateCombo(){
         try {
             Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
@@ -806,9 +902,11 @@ public class Admin extends JFrame{
             while (resultSet.next())
                 comboBox.addItem(resultSet.getInt("specimenid"));
 
-        }
-        catch (Exception e){
-            JOptionPane.showMessageDialog(null, e);
+            comboBox.setSelectedIndex(valuecombobox);
+        }catch (SQLException sq){
+            JOptionPane.showMessageDialog(null, sq);
+        } catch (IllegalArgumentException iae){
+            System.out.println("nani");
         }
     }
 
@@ -914,5 +1012,8 @@ public class Admin extends JFrame{
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
+
+
+    //TODO: add functionalities to generate report
 }
 
