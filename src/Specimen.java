@@ -1,15 +1,18 @@
 import javax.swing.*;
+import java.awt.*;
+import java.io.FileInputStream;
 import java.sql.*;
 
 public class Specimen extends Admin{
-    private String commonName, genus, species, photo, stem, leaf;
+    private String commonName, genus, species, stem, leaf;
     private int specimenId;
+    private byte[] photo;
 
     public Specimen(){
         System.out.println("Specimen created");
     }
 
-    public Specimen(int specimenId, String commonName, String genus, String species, String photo, String stem, String leaf) {
+    public Specimen(int specimenId, String commonName, String genus, String species, byte[] photo, String stem, String leaf) {
         this.specimenId = specimenId;
         this.commonName = commonName;
         this.genus = genus;
@@ -51,13 +54,14 @@ public class Specimen extends Admin{
         this.species = species;
     }
 
-    public String getPhoto() {
+    public byte[] getPhoto() {
         return photo;
     }
 
-    public void setPhoto(String photo) {
+    public void setPhoto(byte[] photo) {
         this.photo = photo;
     }
+
 
     public String getStem() {
         return stem;
@@ -83,7 +87,10 @@ public class Specimen extends Admin{
             stmt.setString(1, commonName);
             stmt.setString(2, genus);
             stmt.setString(3, species);
-            stmt.setString(4, photo);
+
+            FileInputStream fin = new FileInputStream(photo);
+            stmt.setBinaryStream(4, fin);
+
             stmt.setString(5, stem);
             stmt.setString(6, leaf);
 

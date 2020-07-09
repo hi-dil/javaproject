@@ -1,10 +1,15 @@
 import javax.swing.*;
+import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -14,6 +19,9 @@ public class Admin extends JFrame{
     JTable table;
     JComboBox comboBox = new JComboBox();
     final String[] recordvalue = new String[6];
+    JLabel imagelable, imagetable;
+    byte[] specimenimage = null;
+
 
 
     public ArrayList<Specimen> specimenList() {
@@ -28,7 +36,7 @@ public class Admin extends JFrame{
             Specimen specimen;
             while(resultSet.next()){
                 specimen = new Specimen(resultSet.getInt("specimenId"), resultSet.getString("Commonname"),
-                        resultSet.getString("Genus"), resultSet.getString("Species"), resultSet.getString("Photo"),
+                        resultSet.getString("Genus"), resultSet.getString("Species"), resultSet.getBytes("Photo"),
                         resultSet.getString("Stem"), resultSet.getString("Leaf"));
 
                 specimenList.add(specimen);
@@ -48,17 +56,24 @@ public class Admin extends JFrame{
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         Object[] row = new Object[7];
 
-        for(int i=0; i<list.size(); i++){
-            row[0] = list.get(i).getSpecimenId();
-            row[1] = list.get(i).getCommonName();
-            row[2] = list.get(i).getGenus();
-            row[3] = list.get(i).getSpecies();
-            row[4] = list.get(i).getPhoto();
-            row[5] = list.get(i).getStem();
-            row[6] = list.get(i).getLeaf();
+        for (Specimen specimen : list) {
+            row[0] = specimen.getSpecimenId();
+            row[1] = specimen.getCommonName();
+            row[2] = specimen.getGenus();
+            row[3] = specimen.getSpecies();
+            row[4] = specimen.getStem();
+            row[5] = specimen.getLeaf();
 
             model.addRow(row);
         }
+    }
+
+
+    public ImageIcon ResizeImage(String path){
+        ImageIcon image = new ImageIcon(path);
+        Image img = image.getImage();
+        Image newImg = img.getScaledInstance(imagelable.getWidth(), imagelable.getHeight(), Image.SCALE_SMOOTH);
+        return new ImageIcon(newImg);
     }
 
 
@@ -198,7 +213,7 @@ public class Admin extends JFrame{
 
     void addrecord(){
         JFrame frame = new JFrame();
-        frame.setBounds(100, 100, 345, 678);
+        frame.setBounds(100, 100, 345, 775);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel welcome = new JLabel("Please enter the details to add record");
@@ -210,7 +225,7 @@ public class Admin extends JFrame{
         panel.setLayout(null);
 
         JPanel panel_1 = new JPanel();
-        panel_1.setBounds(10, 32, 314, 152);
+        panel_1.setBounds(10, 10, 314, 294);
         panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel.add(panel_1);
         panel_1.setLayout(null);
@@ -259,17 +274,21 @@ public class Admin extends JFrame{
         panel_1.add(slable);
 
         JLabel Photo = 	new JLabel("Photo");
-        Photo.setBounds(6, 107, 45, 13);
+        Photo.setBounds(6, 103, 45, 13);
         panel_1.add(Photo);
 
         JLabel l = new JLabel("no file selected");
-        l.setBounds(107, 129, 106, 13);
+        l.setBounds(109, 134, 195, 13);
+
+        imagelable = new JLabel();
 
         JButton browse = new JButton("browse");
         browse.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 // create an object of JFileChooser class
                 JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+                FileNameExtensionFilter filter = new FileNameExtensionFilter("*.Images", "jpg", "gif", "png");
+                j.addChoosableFileFilter(filter);
 
                 // invoke the showsOpenDialog function to show the save dialog
                 int r = j.showOpenDialog(null);
@@ -278,14 +297,30 @@ public class Admin extends JFrame{
                 if (r == JFileChooser.APPROVE_OPTION)
 
                 {
+                    File selectedFile = j.getSelectedFile();
                     // set the label to the path of the selected file
                     l.setText(j.getSelectedFile().getAbsolutePath());
+                    String path = selectedFile.getAbsolutePath();
+                    imagelable.setIcon(ResizeImage(path));
+
+                    try {
+                        File image = new File(path);
+                        FileInputStream fis = new FileInputStream(image);
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        byte[] buf = new byte[1024];
+                        for(int readNum; (readNum=fis.read(buf)) != -1;) bos.write(buf, 0, readNum);
+
+                        specimenimage = bos.toByteArray();
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, ex);
+                    }
                 }
                 // if the user cancelled the operation
                 else
                     l.setText("the user cancelled the operation");
             }
         });
+
         browse.setBounds(109, 103, 85, 21);
         panel_1.add(browse);
 
@@ -295,9 +330,12 @@ public class Admin extends JFrame{
         panel_1.add(stextfield);
         stextfield.setColumns(10);
 
+        imagelable.setBounds(109, 152, 124, 130);
+        panel_1.add(imagelable);
+
         JPanel panel_2 = new JPanel();
         panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(10, 194, 314, 265);
+        panel_2.setBounds(10, 312, 314, 265);
         panel.add(panel_2);
         panel_2.setLayout(null);
 
@@ -339,7 +377,7 @@ public class Admin extends JFrame{
 
         JPanel panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_3.setBounds(10, 469, 311, 97);
+        panel_3.setBounds(13, 587, 311, 97);
         panel.add(panel_3);
         panel_3.setLayout(new GridLayout(0, 1, 0, 5));
 
@@ -356,7 +394,7 @@ public class Admin extends JFrame{
         panel_3.add(chckbxNewCheckBox_2);
 
         JButton save = new JButton("Save");
-        save.setBounds(236, 597, 85, 21);
+        save.setBounds(231, 694, 85, 21);
         panel.add(save);
 
         save.addActionListener(e -> {
@@ -381,7 +419,7 @@ public class Admin extends JFrame{
         });
 
         JButton back = new JButton("Back");
-        back.setBounds(141, 597, 85, 21);
+        back.setBounds(136, 694, 85, 21);
         panel.add(back);
 
         back.addActionListener(e -> {
@@ -397,7 +435,7 @@ public class Admin extends JFrame{
 
     public void displayrecord(){
         JFrame frame = new JFrame();
-        frame.setBounds(100, 100, 1218, 692);
+        frame.setBounds(100, 100, 1218, 451);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.getContentPane().setLayout(null);
 
@@ -407,17 +445,33 @@ public class Admin extends JFrame{
         lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
         frame.getContentPane().add(lblNewLabel);
 
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setBounds(10, 52, 1184, 540);
-        frame.getContentPane().add(scrollPane);
+        JPanel panel_1 = new JPanel();
+        panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Records", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+        panel_1.setBounds(10, 51, 815, 317);
+        frame.getContentPane().add(panel_1);
+        panel_1.setLayout(null);
+
+        JScrollPane scrollPane_1 = new JScrollPane();
+        scrollPane_1.setBounds(10, 15, 795, 292);
+        panel_1.add(scrollPane_1);
 
         table = new JTable();
-        scrollPane.setViewportView(table);
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int i = table.getSelectedRow();
+
+                byte[] img = (specimenList().get(i).getPhoto());
+                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagetable.getWidth(), imagetable.getHeight(), Image.SCALE_SMOOTH));
+                imagetable.setIcon(imageIcon);
+            }
+        });
+        scrollPane_1.setViewportView(table);
         table.setModel(new DefaultTableModel(
                 new Object[][] {
                 },
                 new String[] {
-                        "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
+                        "Specimen Id", "Common Name", "Genus", "Species", "Stem", "Leaf"
                 }
         ) {
             Class[] columnTypes = new Class[] {
@@ -429,13 +483,25 @@ public class Admin extends JFrame{
         });
 
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
         table.setDefaultRenderer(String.class, centerRenderer);
+        table.getColumnModel().getColumn(0).setPreferredWidth(90);
+
+
+        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
 
         JButton back = new JButton("back");
-        back.setBounds(571, 613, 98, 21);
+        back.setBounds(554, 378, 98, 21);
         frame.getContentPane().add(back);
-        table.getColumnModel().getColumn(0).setPreferredWidth(90);
+
+        JPanel imagepanel = new JPanel();
+        imagepanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Pictures", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+        imagepanel.setBounds(835, 50, 359, 318);
+        frame.getContentPane().add(imagepanel);
+        imagepanel.setLayout(null);
+
+        imagetable = new JLabel("Pictures");
+        imagetable.setBounds(10, 23, 339, 285);
+        imagepanel.add(imagetable);
 
         back.addActionListener(e -> {
             mainmenu();
@@ -769,7 +835,7 @@ public class Admin extends JFrame{
                 new Object[][] {
                 },
                 new String[] {
-                        "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
+                        "Specimen Id", "Common Name", "Genus", "Species", "Stem", "Leaf"
                 }
         ) {
             Class[] columnTypes = new Class[] {
