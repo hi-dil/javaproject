@@ -31,57 +31,28 @@ public class Specimen extends Admin{
         return specimenId;
     }
 
-    public void setSpecimenId(int specimenId) {
-        this.specimenId = specimenId;
-    }
-
     public String getCommonName() {
         return commonName;
-    }
-
-    public void setCommonName(String commonName) {
-        this.commonName = commonName;
     }
 
     public String getGenus() {
         return genus;
     }
 
-    public void setGenus(String genus) {
-        this.genus = genus;
-    }
-
     public String getSpecies() {
         return species;
-    }
-
-    public void setSpecies(String species) {
-        this.species = species;
     }
 
     public byte[] getPhoto() {
         return photo;
     }
 
-    public void setPhoto(byte[] photo) {
-        this.photo = photo;
-    }
-
-
     public String getStem() {
         return stem;
     }
 
-    public void setStem(String stem) {
-        this.stem = stem;
-    }
-
     public String getLeaf() {
         return leaf;
-    }
-
-    public void setLeaf(String leaf) {
-        this.leaf = leaf;
     }
 
     public void addrecord(String commonName, String genus, String species, String photo, String stem, String leaf){
@@ -178,7 +149,5 @@ public class Specimen extends Admin{
                 JOptionPane.showMessageDialog(null, e);
             }
         }
-
-
     }
 }

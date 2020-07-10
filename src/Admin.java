@@ -12,43 +12,46 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.stream.Stream;
 
 public class Admin extends JFrame{
 
     // Use in login()
-    String admin = "admin";
-    String adminpassword = "admin";
+    private String admin = "admin";
+    private String adminpassword = "admin";
 
     // Use in addrecord()
-    byte[] specimenimage = null;
+    private byte[] specimenimage = null;
 
     // Use in editrecord()
-    String[] recordvalue = new String[5];
-    JLabel imageedit;
-    ImageIcon editimage;
-    int valuecombobox = 0;
+    private String[] recordvalue = new String[5];
+    private JLabel imageedit;
+    private ImageIcon editimage;
+    private int valuecombobox = 0;
 
     // Use in displayrecord()
-    JLabel imagetable;
+    private JLabel imagetable;
 
     // Use in deleterecord()
-    JTable table;
+    private JTable table;
 
     // Use in searchrecord()
-    String locationsearchtext = "";
-    String speciessearchtext = "";
+    private String locationsearchtext = "";
+    private String speciessearchtext = "";
 
+    // Use in generatesummary()
+    private String combosummary = "no filter";
+    private String comboboxdatesummary = "no filter";
 
     // Use in generatesummary and searchrecord()
-    JLabel imagesummary;
-    JTable tablesampling;
-    String combosummary = "no filter";
+    private JLabel imagesummary;
+    private JTable tablesampling;
 
     //Use in addrecord() and editrecord()
-    JLabel imagelable;
+    private JLabel imagelable;
 
     // Use in editrecord() and deleterecord()
-    JComboBox comboBox = new JComboBox();
+    private JComboBox comboBox = new JComboBox();
 
     //+-+-+-+-+-+-+- use to connect sql db for displayrecord() and deleterecord()-+-+-+-+-+-+-+
 
@@ -202,33 +205,58 @@ public class Admin extends JFrame{
 
         try {
             Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-            Statement statement = myConn.createStatement();
-            ResultSet resultSet = switch (combosummary) {
-                case "Kubah National Park" -> statement.executeQuery("select * " +
+            ResultSet resultSet = null;
+
+            if(comboboxdatesummary.equals("no filter")){
+                if(combosummary.equals("no filter")){
+                    Statement statement = myConn.createStatement();
+                    resultSet = statement.executeQuery("select * " +
+                            "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
+                }
+                else{
+                    String sql = "select * " +
+                            "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                            "where specimenevent.location = ?";
+
+                    PreparedStatement statement = myConn.prepareStatement(sql);
+                    statement.setString(1, combosummary);
+
+                    resultSet = statement.executeQuery();
+                }
+            }
+            else if (combosummary.equals("no filter")){
+                if(comboboxdatesummary.equals("no filter")){
+                    Statement statement = myConn.createStatement();
+                    resultSet = statement.executeQuery("select * " +
+                            "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
+                }
+                else{
+                    String sql = "select * " +
+                            "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                            "where specimenevent.date = ?";
+
+                    PreparedStatement statement = myConn.prepareStatement(sql);
+                    statement.setString(1, comboboxdatesummary);
+
+                    resultSet = statement.executeQuery();
+                }
+            }
+            else{
+                String sql = "select * " +
                         "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
                         "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Kubah National Park'");
+                        "where specimenevent.date = ? and specimenevent.location = ?";
 
-                case "Bako National Park" -> statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Bako National Park'");
+                PreparedStatement statement = myConn.prepareStatement(sql);
+                statement.setString(1, comboboxdatesummary);
+                statement.setString(2, combosummary);
 
-                case "Maludam National Park" -> statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Maludam '");
-
-                case "Mount Santubong" -> statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Mount Santubong'");
-
-                default -> statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
-            };
-
+                resultSet = statement.executeQuery();
+            }
 
             SpecimenSamplingList specimenSampling;
             while(resultSet.next()){
@@ -274,7 +302,7 @@ public class Admin extends JFrame{
 
 
     // Use for showing image to label in addrecord() and editrecord()
-    public ImageIcon ResizeImage(String path){
+    public ImageIcon ResizeImage(String path, JLabel imagelable){
         ImageIcon image = new ImageIcon(path);
         Image img = image.getImage();
         Image newImg = img.getScaledInstance(imagelable.getWidth(), imagelable.getHeight(), Image.SCALE_SMOOTH);
@@ -299,6 +327,33 @@ public class Admin extends JFrame{
         } catch (IllegalArgumentException iae){
             System.out.println("nani");
         }
+    }
+
+
+    // Use to validate if the user has filled in all the field
+    public boolean validatefields(String commonname, String genus, String species, String photo, String stem, String leaf,
+                               boolean event1, boolean event2, boolean event3, boolean event4, boolean event5,
+                               boolean event6, String function)
+    {
+        if(function.equals("add")){
+            if(Stream.of(commonname, genus, species, photo, stem, leaf).anyMatch(String::isEmpty)){
+                JOptionPane.showMessageDialog(null, "Please complete all the fields");
+                return false;
+            }
+
+            if(!event1 && !event2 && !event3 && !event4 && !event5 && !event6){
+                JOptionPane.showMessageDialog(null, "Please select any of the sampling event!");
+                return false;
+            }
+
+        }
+        else{
+            if(Stream.of(commonname, genus, species, stem, leaf).anyMatch(String::isEmpty)){
+                JOptionPane.showMessageDialog(null, "Please complete all the fields");
+                return false;
+            }
+
+        } return true;
     }
 
 
@@ -342,6 +397,23 @@ public class Admin extends JFrame{
                 int key = e.getKeyCode();
                 if (key == 10){
                     passwordField.requestFocus();
+                }
+            }
+        });
+
+        passwordField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int key = e.getKeyCode();
+                if (key == 10){
+                    String userName = usernametextfield.getText();
+                    String password = passwordField.getText();
+                    if ((userName.equals(admin)) && (password.equals(adminpassword))) {
+                        mainmenu();
+                        frame.setVisible(false);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid username or password");
+                    }
                 }
             }
         });
@@ -434,7 +506,7 @@ public class Admin extends JFrame{
         });
 
         editRecord.addActionListener(e -> {
-            editrecord();
+            editrecord(false);
             frame.setVisible(false);
         });
 
@@ -452,7 +524,7 @@ public class Admin extends JFrame{
         frame.setLocationRelativeTo(null);
     }
 
-    void addrecord(){
+    public void addrecord(){
 
         // Component Declaration
         JFrame frame = new JFrame();
@@ -580,7 +652,7 @@ public class Admin extends JFrame{
                     // set the label to the path of the selected file
                     l.setText(j.getSelectedFile().getAbsolutePath());
                     String path = selectedFile.getAbsolutePath();
-                    imagelable.setIcon(ResizeImage(path));
+                    imagelable.setIcon(ResizeImage(path, imagelable));
 
                     try {
                         File image = new File(path);
@@ -648,78 +720,91 @@ public class Admin extends JFrame{
         });
 
         save.addActionListener(e -> {
-            int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to add this record?", "Add Record",
-                    JOptionPane.OK_CANCEL_OPTION);
+            String commonnameaction = commonnametextfield.getText();
+            String genusaction = gtextfield.getText();
+            String speciesaction = stextfield.getText();
+            String photolocation = l.getText();
+            String stemaction = stemtextarea.getText();
+            String leafaction = leafta.getText();
 
-            if (input == 0){
-                String commonnameaction = commonnametextfield.getText();
-                String genusaction = gtextfield.getText();
-                String speciesaction = stextfield.getText();
-                String photolocation = l.getText();
-                String stemaction = stemtextarea.getText();
-                String leafaction = leafta.getText();
-
-                Specimen specimen = new Specimen();
-                specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
-
-                int id = specimen.getSpecimenId();
-                Connection myConn = null;
-                try {
-                    myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-
-
-                    PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
-                            "values(?, ?)");
-
-                    if(samplingevent1.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 1);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent2.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 2);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent3.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 3);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent4.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 4);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent5.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 5);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent6.isSelected()){
-                        stmt.setInt(1, id);
-                        stmt.setInt(2, 6);
-                        stmt.executeUpdate();
-                    }
-
-                    myConn.close();
-
-
-
-                } catch (Exception ex){
-                    JOptionPane.showMessageDialog(null, ex);
-                }
-
-                JOptionPane.showMessageDialog(null, "Record added!");
+            if(l.getText().equals("no file selected")){
+                photolocation = "";
             }
 
-            addrecord();
-            frame.setVisible(false);
+            boolean verify;
+
+            verify = validatefields(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction,
+                        samplingevent1.isSelected(), samplingevent2.isSelected(), samplingevent3.isSelected(), samplingevent4.isSelected(),
+                        samplingevent5.isSelected(), samplingevent6.isSelected(), "add");
+
+            if (verify){
+                int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to add this record?", "Add Record",
+                        JOptionPane.OK_CANCEL_OPTION);
+
+                if (input == 0){
+
+                    Specimen specimen = new Specimen();
+                    specimen.addrecord(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+
+                    int id = specimen.getSpecimenId();
+                    Connection myConn = null;
+                    try {
+                        myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+
+
+                        PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
+                                "values(?, ?)");
+
+                        if(samplingevent1.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 1);
+                            stmt.executeUpdate();
+                        }
+
+                        if(samplingevent2.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 2);
+                            stmt.executeUpdate();
+                        }
+
+                        if(samplingevent3.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 3);
+                            stmt.executeUpdate();
+                        }
+
+                        if(samplingevent4.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 4);
+                            stmt.executeUpdate();
+                        }
+
+                        if(samplingevent5.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 5);
+                            stmt.executeUpdate();
+                        }
+
+                        if(samplingevent6.isSelected()){
+                            stmt.setInt(1, id);
+                            stmt.setInt(2, 6);
+                            stmt.executeUpdate();
+                        }
+
+                        myConn.close();
+
+
+
+                    } catch (Exception ex){
+                        JOptionPane.showMessageDialog(null, ex);
+                    }
+
+                    JOptionPane.showMessageDialog(null, "Record added!");
+                }
+
+                addrecord();
+                frame.setVisible(false);
+            }
         });
 
 
@@ -809,7 +894,7 @@ public class Admin extends JFrame{
         table.setDefaultRenderer(String.class, centerRenderer);
         table.getColumnModel().getColumn(0).setPreferredWidth(90);
 
-        imagetable = new JLabel("Pictures");
+        imagetable = new JLabel("");
         imagetable.setBounds(10, 23, 339, 285);
 
         JButton back = new JButton("back");
@@ -859,7 +944,7 @@ public class Admin extends JFrame{
         frame.setLocationRelativeTo(null);
     }
 
-    public void editrecord(){
+    public void editrecord(boolean stop){
 
         // Component Declaration
         JFrame frame = new JFrame();
@@ -971,6 +1056,9 @@ public class Admin extends JFrame{
         //comboBox.setSelectedIndex(valuecombobox);
         comboBox.setBounds(21, 21, 198, 21);
 
+        if(!stop)
+            comboBox.addItem("");
+
         JButton apply = new JButton("Apply");
         apply.setBounds(229, 21, 85, 21);
 
@@ -1011,8 +1099,11 @@ public class Admin extends JFrame{
                 if (r == JFileChooser.APPROVE_OPTION)
 
                 {
+                    File selectedFile = j.getSelectedFile();
                     // set the label to the path of the selected file
                     l.setText(j.getSelectedFile().getAbsolutePath());
+                    String path = selectedFile.getAbsolutePath();
+                    imageedit.setIcon(ResizeImage(path, imageedit));
                 }
                 // if the user cancelled the operation
                 else
@@ -1043,30 +1134,10 @@ public class Admin extends JFrame{
         });
 
         update.addActionListener(e -> {
-            int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to update this record?", "Update Record",
-                    JOptionPane.OK_CANCEL_OPTION);
-
-            if (input==0){
-                int value = (int) comboBox.getSelectedItem();
-
-                if (!samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected() &&
-                        !samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected()){
-                    System.out.println("nice one");
-                }
-                else{
-                    try{
-                        Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-                        PreparedStatement stmt = myConn.prepareStatement("delete from specimentake where specimenid = ?");
-
-                        stmt.setInt(1, value);
-                        stmt.executeUpdate();
-                        myConn.close();
-                    }
-                    catch (Exception ex){
-                        JOptionPane.showMessageDialog(null, ex);
-                    }
-                }
-
+            if(comboBox.getSelectedItem().equals("")){
+                JOptionPane.showMessageDialog(null, "Please selected any specimen Id and click apply!");
+            }
+            else {
                 String commonnameaction = commonnametextfield.getText();
                 String genusaction = gtextfield.getText();
                 String speciesaction = stextfield.getText();
@@ -1074,102 +1145,131 @@ public class Admin extends JFrame{
                 String stemaction = stemta.getText();
                 String leafaction = leafta.getText();
 
-                Specimen specimen = new Specimen();
-                specimen.updateRecord(value, commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+                boolean verify = validatefields(commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction,
+                        samplingevent1.isSelected(), samplingevent2.isSelected(), samplingevent3.isSelected(), samplingevent4.isSelected(),
+                        samplingevent5.isSelected(), samplingevent6.isSelected(), "edit");
 
-                JOptionPane.showMessageDialog(null, "The record has been updated!");
+                if (verify) {
+                    int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to update this record?", "Update Record",
+                            JOptionPane.OK_CANCEL_OPTION);
 
-                try{
-                    Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-                    PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
-                            "values(?, ?)");
+                    if (input == 0) {
+                        int value = (int) comboBox.getSelectedItem();
 
-                    if(samplingevent1.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 1);
-                        stmt.executeUpdate();
+                        if (!samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected() &&
+                                !samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected()) {
+                            System.out.println("nice one");
+                        } else {
+                            try {
+                                Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                                PreparedStatement stmt = myConn.prepareStatement("delete from specimentake where specimenid = ?");
+
+                                stmt.setInt(1, value);
+                                stmt.executeUpdate();
+                                myConn.close();
+                            } catch (Exception ex) {
+                                JOptionPane.showMessageDialog(null, ex);
+                            }
+                        }
+
+
+                        Specimen specimen = new Specimen();
+                        specimen.updateRecord(value, commonnameaction, genusaction, speciesaction, photolocation, stemaction, leafaction);
+
+                        JOptionPane.showMessageDialog(null, "The record has been updated!");
+
+                        try {
+                            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                            PreparedStatement stmt = myConn.prepareStatement("insert into specimentake(specimenid, specimeneventid)" +
+                                    "values(?, ?)");
+
+                            if (samplingevent1.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 1);
+                                stmt.executeUpdate();
+                            }
+
+                            if (samplingevent2.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 2);
+                                stmt.executeUpdate();
+                            }
+
+                            if (samplingevent3.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 3);
+                                stmt.executeUpdate();
+                            }
+
+                            if (samplingevent4.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 4);
+                                stmt.executeUpdate();
+                            }
+
+                            if (samplingevent5.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 5);
+                                stmt.executeUpdate();
+                            }
+
+                            if (samplingevent6.isSelected()) {
+                                stmt.setInt(1, value);
+                                stmt.setInt(2, 6);
+                                stmt.executeUpdate();
+                            }
+
+                            myConn.close();
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(null, ex);
+                        }
+
+                    } else {
+                        editrecord(true);
+                        frame.setVisible(false);
                     }
-
-                    if(samplingevent2.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 2);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent3.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 3);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent4.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 4);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent5.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 5);
-                        stmt.executeUpdate();
-                    }
-
-                    if(samplingevent6.isSelected()){
-                        stmt.setInt(1, value);
-                        stmt.setInt(2, 6);
-                        stmt.executeUpdate();
-                    }
-
-                    myConn.close();
                 }
-                catch (Exception ex){
-                    JOptionPane.showMessageDialog(null, ex);
-                }
-
             }
-            else {
-                editrecord();
-                frame.setVisible(false);
-            }
-
         });
 
         apply.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int value = (int) comboBox.getSelectedItem();
-                valuecombobox = comboBox.getSelectedIndex();
+                if(!comboBox.getSelectedItem().equals("")){
+                    int value = (int) comboBox.getSelectedItem();
+                    valuecombobox = comboBox.getSelectedIndex();
 
-                try {
-                    Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-                    PreparedStatement stmt = myConn.prepareStatement("select commonname, genus, species, photo, stem, leaf from specimen " +
-                            "where specimenid = ?");
-                    stmt.setInt(1, value);
+                    try {
+                        Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+                        PreparedStatement stmt = myConn.prepareStatement("select commonname, genus, species, photo, stem, leaf from specimen " +
+                                "where specimenid = ?");
+                        stmt.setInt(1, value);
 
-                    ResultSet resultSet = stmt.executeQuery();
+                        ResultSet resultSet = stmt.executeQuery();
 
-                    while(resultSet.next()){
-                        recordvalue[0] = resultSet.getString("commonname");
-                        recordvalue[1] = resultSet.getString("genus");
-                        recordvalue[2] = resultSet.getString("species");
-                        recordvalue[3] = resultSet.getString("stem");
-                        recordvalue[4] = resultSet.getString("leaf");
+                        while(resultSet.next()){
+                            recordvalue[0] = resultSet.getString("commonname");
+                            recordvalue[1] = resultSet.getString("genus");
+                            recordvalue[2] = resultSet.getString("species");
+                            recordvalue[3] = resultSet.getString("stem");
+                            recordvalue[4] = resultSet.getString("leaf");
 
-                        byte[] img = resultSet.getBytes("photo");
-                        ImageIcon image = new ImageIcon(img);
-                        Image im = image.getImage();
-                        Image myImg = im.getScaledInstance(imageedit.getWidth(), imageedit.getHeight(), Image.SCALE_SMOOTH);
-                        editimage = new ImageIcon(myImg);
-                        imageedit.setIcon(editimage);
+                            byte[] img = resultSet.getBytes("photo");
+                            ImageIcon image = new ImageIcon(img);
+                            Image im = image.getImage();
+                            Image myImg = im.getScaledInstance(imageedit.getWidth(), imageedit.getHeight(), Image.SCALE_SMOOTH);
+                            editimage = new ImageIcon(myImg);
+                            imageedit.setIcon(editimage);
+
+                        }
+                        myConn.close();
+                        editrecord(true);
+                        frame.setVisible(false);
 
                     }
-                    myConn.close();
-                    editrecord();
-                    frame.setVisible(false);
-
-                }
-                catch (Exception j){
-                    JOptionPane.showMessageDialog(null, j);
+                    catch (Exception j){
+                        JOptionPane.showMessageDialog(null, j);
+                    }
                 }
             }
         });
@@ -1224,8 +1324,9 @@ public class Admin extends JFrame{
         panel.add(btnNewButton_1);
 
         // Outside function
-        // Use to automatically fill the field when the user click the apply button
-        updateCombo();
+        // Use to automatically fill the combobox with specimenid when the user click the apply button
+        if(!stop)
+            updateCombo();
     }
 
     public void searchrecord(){
@@ -1455,26 +1556,43 @@ public class Admin extends JFrame{
     }
 
     public void generateSummary(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 1262, 504);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.getContentPane().setLayout(null);
 
         JLabel lblNewLabel = new JLabel("filter location:");
-        lblNewLabel.setBounds(21, 31, 91, 27);
+        lblNewLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        lblNewLabel.setBounds(0, 31, 91, 27);
 
         JComboBox comboBoxsummary = new JComboBox();
         comboBoxsummary.addItem("no filter");
         comboBoxsummary.addItem("Kubah National Park");
-        comboBoxsummary.addItem("Bako National Park");
+        comboBoxsummary.addItem("Bako National");
         comboBoxsummary.addItem("Maludam National Park");
         comboBoxsummary.addItem("Mount Santubong");
+        comboBoxsummary.setSelectedItem(combosummary);
         comboBoxsummary.setBounds(108, 30, 164, 29);
 
         JPanel panel = new JPanel();
         panel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Summary", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         panel.setBounds(372, 20, 866, 393);
         panel.setLayout(null);
+
+        JComboBox comboBoxdate = new JComboBox();
+        comboBoxdate.addItem("no filter");
+        comboBoxdate.addItem("2020-06-10");
+        comboBoxdate.addItem("2020-06-18");
+        comboBoxdate.addItem("2020-07-01");
+        comboBoxdate.addItem("2020-07-03");
+        comboBoxdate.setSelectedItem(comboboxdatesummary);
+        comboBoxdate.setBounds(108, 69, 164, 27);
+
+        JLabel filterdate = new JLabel("filter date");
+        filterdate.setHorizontalAlignment(SwingConstants.RIGHT);
+        filterdate.setBounds(21, 76, 72, 13);
 
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setBounds(10, 15, 846, 368);
@@ -1494,11 +1612,11 @@ public class Admin extends JFrame{
 
         JPanel panel_1 = new JPanel();
         panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Pictures", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-        panel_1.setBounds(21, 82, 341, 331);
+        panel_1.setBounds(21, 114, 341, 299);
         panel_1.setLayout(null);
 
         JButton apply = new JButton("apply");
-        apply.setBounds(277, 31, 78, 27);
+        apply.setBounds(282, 69, 78, 27);
 
         JButton back = new JButton("Back");
         back.setVerticalAlignment(SwingConstants.BOTTOM);
@@ -1519,7 +1637,9 @@ public class Admin extends JFrame{
 
         apply.addActionListener(e -> {
             combosummary = (String) comboBoxsummary.getSelectedItem();
+            comboboxdatesummary = (String) comboBoxdate.getSelectedItem();
             System.out.println(combosummary);
+            System.out.println(comboboxdatesummary);
             generateSummary();
             frame.setVisible(false);
         });
@@ -1543,7 +1663,8 @@ public class Admin extends JFrame{
 
         frame.getContentPane().add(apply);
         frame.getContentPane().add(back);
-
+        frame.getContentPane().add(filterdate);
+        frame.getContentPane().add(comboBoxdate);
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
 
