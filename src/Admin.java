@@ -1,4 +1,3 @@
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
@@ -8,7 +7,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,31 +14,57 @@ import java.sql.*;
 import java.util.ArrayList;
 
 public class Admin extends JFrame{
+
+    // Use in login()
     String admin = "admin";
     String adminpassword = "admin";
-    JTable table;
-    JComboBox comboBox = new JComboBox();
-    final String[] recordvalue = new String[5];
-    JLabel imagelable, imagetable, imageedit, imagesummary;
+
+    // Use in addrecord()
     byte[] specimenimage = null;
+
+    // Use in editrecord()
+    String[] recordvalue = new String[5];
+    JLabel imageedit;
     ImageIcon editimage;
     int valuecombobox = 0;
-    JTable tablesampling;
-    String combosummary = "no filter";
+
+    // Use in displayrecord()
+    JLabel imagetable;
+
+    // Use in deleterecord()
+    JTable table;
+
+    // Use in searchrecord()
     String locationsearchtext = "";
     String speciessearchtext = "";
 
+
+    // Use in generatesummary and searchrecord()
+    JLabel imagesummary;
+    JTable tablesampling;
+    String combosummary = "no filter";
+
+    //Use in addrecord() and editrecord()
+    JLabel imagelable;
+
+    // Use in editrecord() and deleterecord()
+    JComboBox comboBox = new JComboBox();
+
+    //+-+-+-+-+-+-+- use to connect sql db for displayrecord() and deleterecord()-+-+-+-+-+-+-+
+
+    // used to get data from db and store it inside specimenlist arraylist
     public ArrayList<Specimen> specimenList() {
         ArrayList<Specimen> specimenList = new ArrayList<>();
 
         try {
             Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
             Statement statement = myConn.createStatement();
-
             ResultSet resultSet = statement.executeQuery("select * from specimen");
 
             Specimen specimen;
             while(resultSet.next()){
+
+                // use to store the row record of the table and store it as a object insinde an arraylist
                 specimen = new Specimen(resultSet.getInt("specimenId"), resultSet.getString("Commonname"),
                         resultSet.getString("Genus"), resultSet.getString("Species"), resultSet.getBytes("Photo"),
                         resultSet.getString("Stem"), resultSet.getString("Leaf"));
@@ -56,12 +80,15 @@ public class Admin extends JFrame{
         return specimenList;
     }
 
-
+    // use to show the data inside a db to jtable
     public void show_specimen() {
+
+        // call the specimenlist method to get the data and store it inside a list of arraylist
         ArrayList<Specimen> list = specimenList();
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         Object[] row = new Object[7];
 
+        // use to store the data based on column in table
         for (Specimen specimen : list) {
             row[0] = specimen.getSpecimenId();
             row[1] = specimen.getCommonName();
@@ -74,7 +101,179 @@ public class Admin extends JFrame{
         }
     }
 
+    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
+
+    //+-+-+-+-+-+-+- use to connect sql db for searchrecord()-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    // use to get data from db using where query and return the value of wanted value inside the searchlist array list
+    public ArrayList<SpecimenSamplingList> search() {
+        ArrayList<SpecimenSamplingList> searchList = new ArrayList<>();
+
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            ResultSet resultSet = null;
+
+            // run the query based on the jtextfield is filled or not
+            if(!speciessearchtext.isEmpty() && !locationsearchtext.isEmpty()) {
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                        "where specimenevent.location = ? and specimen.species = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, locationsearchtext);
+                statement.setString(2, speciessearchtext);
+
+                resultSet = statement.executeQuery();
+            }
+            else if(!speciessearchtext.isEmpty()){
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                        "where specimen.species = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, speciessearchtext);
+
+
+                resultSet = statement.executeQuery();
+            }
+            else{
+                String sql = "select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                        "where specimenevent.location = ?";
+                PreparedStatement statement = myConn.prepareStatement(sql);
+
+                statement.setString(1, locationsearchtext);
+
+
+                resultSet = statement.executeQuery();
+            }
+
+            SpecimenSamplingList specimenSampling;
+            while(resultSet.next()){
+                specimenSampling = new SpecimenSamplingList(resultSet.getString("location"), resultSet.getString("date"),
+                        resultSet.getString("time"), resultSet.getString("commonname"), resultSet.getString("genus"),
+                        resultSet.getString("species"), resultSet.getString("stem"), resultSet.getString("leaf"),
+                        resultSet.getInt("specimentakeid"), resultSet.getBytes("photo"));
+
+                searchList.add(specimenSampling);
+            }
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, "The data didn't exist in database");
+        }
+
+        return searchList;
+    }
+
+    // use to show the data inside a db to jtable
+    public void showsearch() {
+        ArrayList<SpecimenSamplingList> list = search();
+        DefaultTableModel model = (DefaultTableModel) tablesampling.getModel();
+        Object[] row = new Object[9];
+
+        for (SpecimenSamplingList specimen : list) {
+            row[0] = specimen.getId();
+            row[1] = specimen.getCommonname();
+            row[2] = specimen.getGenus();
+            row[3] = specimen.getSpecies();
+            row[4] = specimen.getStem();
+            row[5] = specimen.getLeaf();
+            row[6] = specimen.getLocation();
+            row[7] = specimen.getDate();
+            row[8] = specimen.getTime();
+
+            model.addRow(row);
+        }
+    }
+
+    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+
+
+    //+-+-+-+-+-+-+- use to connect sql db for generatesummary()-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    // used for get the value of multiple table in sql using inner join query
+    public ArrayList<SpecimenSamplingList> specimenSamplingList() {
+        ArrayList<SpecimenSamplingList> specimensamplinglist = new ArrayList<>();
+
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            Statement statement = myConn.createStatement();
+            ResultSet resultSet = switch (combosummary) {
+                case "Kubah National Park" -> statement.executeQuery("select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                        "where specimenevent.location = 'Kubah National Park'");
+
+                case "Bako National Park" -> statement.executeQuery("select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                        "where specimenevent.location = 'Bako National Park'");
+
+                case "Maludam National Park" -> statement.executeQuery("select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                        "where specimenevent.location = 'Maludam '");
+
+                case "Mount Santubong" -> statement.executeQuery("select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
+                        "where specimenevent.location = 'Mount Santubong'");
+
+                default -> statement.executeQuery("select * " +
+                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
+                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
+            };
+
+
+            SpecimenSamplingList specimenSampling;
+            while(resultSet.next()){
+
+                // use to get the value from the db and store inside the arraylist by creating specimensamplinglist object
+                specimenSampling = new SpecimenSamplingList(resultSet.getString("location"), resultSet.getString("date"),
+                        resultSet.getString("time"), resultSet.getString("commonname"), resultSet.getString("genus"),
+                        resultSet.getString("species"), resultSet.getString("stem"), resultSet.getString("leaf"),
+                        resultSet.getInt("specimentakeid"), resultSet.getBytes("photo"));
+
+                specimensamplinglist.add(specimenSampling);
+            }
+
+        }
+        catch (Exception e){
+            JOptionPane.showMessageDialog(null, e);
+        }
+
+        return specimensamplinglist;
+    }
+
+    public void showspecimensampling() {
+        ArrayList<SpecimenSamplingList> list = specimenSamplingList();
+        DefaultTableModel model = (DefaultTableModel) tablesampling.getModel();
+        Object[] row = new Object[9];
+
+        for (SpecimenSamplingList specimen : list) {
+            row[0] = specimen.getId();
+            row[1] = specimen.getCommonname();
+            row[2] = specimen.getGenus();
+            row[3] = specimen.getSpecies();
+            row[4] = specimen.getStem();
+            row[5] = specimen.getLeaf();
+            row[6] = specimen.getLocation();
+            row[7] = specimen.getDate();
+            row[8] = specimen.getTime();
+
+            model.addRow(row);
+        }
+    }
+
+    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+
+
+    // Use for showing image to label in addrecord() and editrecord()
     public ImageIcon ResizeImage(String path){
         ImageIcon image = new ImageIcon(path);
         Image img = image.getImage();
@@ -83,8 +282,31 @@ public class Admin extends JFrame{
     }
 
 
+    // Use to sync up the JComboBox with the value in database in deleterecord()
+    public void updateCombo(){
+        try {
+            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
+            PreparedStatement pst = myConn.prepareStatement("select * from specimen");
+
+            ResultSet resultSet = pst.executeQuery();
+
+            while (resultSet.next())
+                comboBox.addItem(resultSet.getInt("specimenid"));
+
+            comboBox.setSelectedIndex(valuecombobox);
+        }catch (SQLException sq){
+            JOptionPane.showMessageDialog(null, sq);
+        } catch (IllegalArgumentException iae){
+            System.out.println("nani");
+        }
+    }
+
+
+    //+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Main Function -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
     public void login(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 383, 251);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -92,19 +314,28 @@ public class Admin extends JFrame{
 
         JPanel centerpanel = new JPanel();
         frame.getContentPane().add(centerpanel, BorderLayout.CENTER);
-        centerpanel.setLayout(null);
 
         JLabel welcomelable = new JLabel("Welcome! Please login to continue");
         welcomelable.setBounds(84, 10, 261, 48);
-        centerpanel.add(welcomelable);
 
         JLabel usernamelable = new JLabel("Username");
         usernamelable.setBounds(57, 68, 101, 40);
-        centerpanel.add(usernamelable);
 
         JPasswordField passwordField = new JPasswordField();
+        passwordField.setBounds(127, 118, 182, 19);
 
         JTextField usernametextfield = new JTextField();
+        usernametextfield.setBounds(127, 79, 182, 19);
+        usernametextfield.setColumns(10);
+
+        JLabel lblNewLabel = new JLabel("Password");
+        lblNewLabel.setBounds(57, 121, 66, 13);
+
+        JButton loginButton = new JButton("Login");
+        loginButton.setBounds(224, 169, 85, 21);
+
+
+        // Event Handler
         usernametextfield.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -114,20 +345,6 @@ public class Admin extends JFrame{
                 }
             }
         });
-        usernametextfield.setBounds(127, 79, 182, 19);
-        centerpanel.add(usernametextfield);
-        usernametextfield.setColumns(10);
-
-        JLabel lblNewLabel = new JLabel("Password");
-        lblNewLabel.setBounds(57, 121, 66, 13);
-        centerpanel.add(lblNewLabel);
-
-        passwordField.setBounds(127, 118, 182, 19);
-        centerpanel.add(passwordField);
-
-        JButton loginButton = new JButton("Login");
-        loginButton.setBounds(224, 169, 85, 21);
-        centerpanel.add(loginButton);
 
         loginButton.addActionListener(e -> {
             String userName = usernametextfield.getText();
@@ -140,13 +357,23 @@ public class Admin extends JFrame{
             }
         });
 
+
+        // Component Placement
+        centerpanel.setLayout(null);
+        centerpanel.add(welcomelable);
+        centerpanel.add(usernamelable);
+        centerpanel.add(usernametextfield);
+        centerpanel.add(lblNewLabel);
+        centerpanel.add(passwordField);
+        centerpanel.add(loginButton);
+
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
 
-
-
     public void mainmenu(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.getContentPane().setBackground(UIManager.getColor("Button.disabledShadow"));
         frame.setBounds(100, 100, 368, 451);
@@ -156,142 +383,185 @@ public class Admin extends JFrame{
         JLabel lblNewLabel = new JLabel("Welcome Back!");
         lblNewLabel.setFont(new Font("Arial", Font.PLAIN, 20));
         lblNewLabel.setBounds(101, 0, 151, 50);
-        frame.getContentPane().add(lblNewLabel);
 
         JButton addRecord = new JButton("Add Record");
         addRecord.setBackground(UIManager.getColor("Button.foreground"));
         addRecord.setBounds(80, 93, 193, 32);
-        frame.getContentPane().add(addRecord);
 
+        JButton displayRecord = new JButton("Display Record");
+        displayRecord.setBounds(80, 141, 193, 32);
+
+        JButton deleteRecord = new JButton("Delete Record");
+        deleteRecord.setBounds(80, 243, 193, 32);
+
+        JButton searchRecord = new JButton("Search Record");
+        searchRecord.setBounds(80, 295, 193, 32);
+
+        JLabel lblNewLabel_1 = new JLabel("Please select what you want to do");
+        lblNewLabel_1.setBounds(80, 40, 193, 21);
+
+        JButton summary = new JButton("Generate Summary");
+        summary.setBounds(80, 346, 193, 32);
+
+        JButton editRecord = new JButton("EditRecord");
+        editRecord.setBounds(80, 192, 193, 32);
+
+
+        // Event Handler
         addRecord.addActionListener(e -> {
             addrecord();
             frame.setVisible(false);
         });
-
-        JButton displayRecord = new JButton("Display Record");
-        displayRecord.setBounds(80, 141, 193, 32);
-        frame.getContentPane().add(displayRecord);
 
         displayRecord.addActionListener(e -> {
             displayrecord();
             frame.setVisible(false);
         });
 
-        JButton deleteRecord = new JButton("Delete Record");
-        deleteRecord.setBounds(80, 243, 193, 32);
-        frame.getContentPane().add(deleteRecord);
-
         deleteRecord.addActionListener(e -> {
             deleteRecord();
             frame.setVisible(false);
         });
-
-        JButton searchRecord = new JButton("Search Record");
-        searchRecord.setBounds(80, 295, 193, 32);
-        frame.getContentPane().add(searchRecord);
 
         searchRecord.addActionListener(e -> {
             searchrecord();
             frame.setVisible(false);
         });
 
-        JLabel lblNewLabel_1 = new JLabel("Please select what you want to do");
-        lblNewLabel_1.setBounds(80, 40, 193, 21);
-        frame.getContentPane().add(lblNewLabel_1);
-
-        JButton summary = new JButton("Generate Summary");
-        summary.setBounds(80, 346, 193, 32);
-        frame.getContentPane().add(summary);
-
         summary.addActionListener(e -> {
             generateSummary();
             frame.setVisible(false);
         });
 
-        JButton editRecord = new JButton("EditRecord");
-        editRecord.setBounds(80, 192, 193, 32);
-        frame.getContentPane().add(editRecord);
-        frame.setVisible(true);
-        frame.setLocationRelativeTo(null);
-
         editRecord.addActionListener(e -> {
             editrecord();
             frame.setVisible(false);
         });
+
+
+        // Component Placement
+        frame.getContentPane().add(lblNewLabel);
+        frame.getContentPane().add(addRecord);
+        frame.getContentPane().add(displayRecord);
+        frame.getContentPane().add(deleteRecord);
+        frame.getContentPane().add(searchRecord);
+        frame.getContentPane().add(lblNewLabel_1);
+        frame.getContentPane().add(summary);
+        frame.getContentPane().add(editRecord);
+        frame.setVisible(true);
+        frame.setLocationRelativeTo(null);
     }
 
     void addrecord(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 345, 775);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel welcome = new JLabel("Please enter the details to add record");
         welcome.setHorizontalAlignment(SwingConstants.CENTER);
-        frame.getContentPane().add(welcome, BorderLayout.NORTH);
 
         JPanel panel = new JPanel();
         frame.getContentPane().add(panel, BorderLayout.CENTER);
-        panel.setLayout(null);
 
         JPanel panel_1 = new JPanel();
         panel_1.setBounds(10, 10, 314, 294);
         panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel.add(panel_1);
-        panel_1.setLayout(null);
 
         JLabel commonnamelable = new JLabel("Common Name");
         commonnamelable.setBounds(6, 15, 146, 21);
-        panel_1.add(commonnamelable);
 
         JTextField gtextfield = new JTextField();
+        gtextfield.setBounds(109, 41, 199, 21);
+        gtextfield.setColumns(10);
 
         JTextField commonnametextfield = new JTextField();
-        commonnametextfield.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                int key = e.getKeyCode();
-                if (key == 10){
-                    gtextfield.requestFocus();
-                }
-            }
-        });
         commonnametextfield.setBounds(109, 15, 199, 21);
-        panel_1.add(commonnametextfield);
         commonnametextfield.setColumns(10);
 
         JLabel glable = new JLabel("Genus");
         glable.setBounds(6, 41, 146, 21);
-        panel_1.add(glable);
 
         JTextField stextfield = new JTextField();
-
-        gtextfield.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                int key = e.getKeyCode();
-                if (key == 10){
-                    stextfield.requestFocus();
-                }
-            }
-        });
-        gtextfield.setBounds(109, 41, 199, 21);
-        panel_1.add(gtextfield);
-        gtextfield.setColumns(10);
+        stextfield.setBounds(109, 71, 199, 22);
+        stextfield.setColumns(10);
 
         JLabel slable = new JLabel("species");
         slable.setBounds(6, 67, 146, 26);
-        panel_1.add(slable);
 
         JLabel Photo = 	new JLabel("Photo");
         Photo.setBounds(6, 103, 45, 13);
-        panel_1.add(Photo);
+
+        JButton browse = new JButton("browse");
+        browse.setBounds(109, 103, 85, 21);
 
         JLabel l = new JLabel("no file selected");
         l.setBounds(109, 134, 195, 13);
 
         imagelable = new JLabel();
+        imagelable.setBounds(109, 152, 124, 130);
 
-        JButton browse = new JButton("browse");
+        JPanel panel_2 = new JPanel();
+        panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_2.setBounds(10, 312, 314, 265);
+
+        JLabel stemlable = new JLabel("Stem");
+        stemlable.setBounds(10, 62, 41, 13);
+
+        JTextArea leafta = new JTextArea();
+        leafta.setLineWrap(true);
+        leafta.setBounds(110, 147, 194, 97);
+
+        JTextArea stemtextarea = new JTextArea();
+        stemtextarea.setLineWrap(true);
+        stemtextarea.setBounds(161, 41, 143, 97);
+
+        JScrollPane stemscroll = new JScrollPane(stemtextarea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        stemscroll.setBounds(110, 30, 194, 97);
+
+        JLabel leaflable = new JLabel("Leaf");
+        leaflable.setBounds(10, 186, 45, 13);
+
+        JScrollPane leafscroll = new JScrollPane(leafta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        leafscroll.setBounds(110, 147, 194, 97);
+
+        JPanel panel_3 = new JPanel();
+        panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_3.setBounds(10, 587, 314, 97);
+
+        JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
+        lblNewLabel.setBounds(6, 15, 295, 15);
+
+        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
+        samplingevent1.setBounds(6, 35, 149, 15);
+
+        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
+        samplingevent2.setBounds(6, 55, 149, 15);
+
+        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
+        samplingevent3.setBounds(6, 75, 137, 15);
+
+        JCheckBox samplingevent4 = new JCheckBox("Sampling Event 4");
+        samplingevent4.setBounds(157, 32, 127, 21);
+
+        JCheckBox samplingevent5 = new JCheckBox("Sampling Event 5");
+        samplingevent5.setBounds(157, 52, 136, 21);
+
+        JCheckBox samplingevent6 = new JCheckBox("Sampling Event 6");
+        samplingevent6.setBounds(157, 72, 136, 21);
+
+        JButton save = new JButton("Save");
+        save.setBounds(239, 694, 85, 21);
+
+        JButton back = new JButton("Back");
+        back.setBounds(10, 694, 85, 21);
+
+        JButton help = new JButton("help");
+        help.setBounds(169, 694, 60, 21);
+
+
+        // Event Handler
         browse.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 // create an object of JFileChooser class
@@ -330,31 +600,6 @@ public class Admin extends JFrame{
             }
         });
 
-        browse.setBounds(109, 103, 85, 21);
-        panel_1.add(browse);
-
-        panel_1.add(l);
-
-        stextfield.setBounds(109, 71, 199, 22);
-        panel_1.add(stextfield);
-        stextfield.setColumns(10);
-
-        imagelable.setBounds(109, 152, 124, 130);
-        panel_1.add(imagelable);
-
-        JPanel panel_2 = new JPanel();
-        panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(10, 312, 314, 265);
-        panel.add(panel_2);
-        panel_2.setLayout(null);
-
-        JLabel stemlable = new JLabel("Stem");
-        stemlable.setBounds(10, 62, 41, 13);
-        panel_2.add(stemlable);
-
-        JTextArea leafta = new JTextArea();
-
-        JTextArea stemtextarea = new JTextArea();
         stemtextarea.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -364,63 +609,43 @@ public class Admin extends JFrame{
                 }
             }
         });
-        stemtextarea.setLineWrap(true);
-        stemtextarea.setBounds(161, 41, 143, 97);
-        panel_2.add(stemtextarea);
 
-        JScrollPane stemscroll = new JScrollPane(stemtextarea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        stemscroll.setBounds(110, 30, 194, 97);
-        panel_2.add(stemscroll);
+        help.addActionListener(e -> {
+            String message =
+                    "Sapling event:             location;                                           date;           time\n" +
+                            "Sampling event 1:          Kubah National Park;                  2020-07-01;     17:08:04\n" +
+                            "Sampling event 2:          Bako National;                          2020-07-03;     09:08:04\n" +
+                            "Sampling event 1:          Mount Santubong;                    2020-07-01;     07:09:13\n" +
+                            "Sampling event 1:          Maludam National Park;            2020-06-18;     08:43:29\n" +
+                            "Sampling event 1:          Kubah National Park;                2020-06-10;     10:43:29\n" +
+                            "Sampling event 1:          Maludam National Park;            2020-07-07;     13:45:40\n";
+            JOptionPane.showMessageDialog(null, message);
+        });
 
-        JLabel leaflable = new JLabel("Leaf");
-        leaflable.setBounds(10, 186, 45, 13);
-        panel_2.add(leaflable);
+        gtextfield.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int key = e.getKeyCode();
+                if (key == 10){
+                    stextfield.requestFocus();
+                }
+            }
+        });
 
-        leafta.setLineWrap(true);
-        leafta.setBounds(110, 147, 194, 97);
-        panel_2.add(leafta);
+        back.addActionListener(e -> {
+            mainmenu();
+            frame.setVisible(false);
+        });
 
-        JScrollPane leafscroll = new JScrollPane(leafta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        leafscroll.setBounds(110, 147, 194, 97);
-        panel_2.add(leafscroll);
-
-        JPanel panel_3 = new JPanel();
-        panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_3.setBounds(10, 587, 314, 97);
-        panel.add(panel_3);
-        panel_3.setLayout(null);
-
-        JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
-        lblNewLabel.setBounds(6, 15, 295, 15);
-        panel_3.add(lblNewLabel);
-
-        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
-        samplingevent1.setBounds(6, 35, 149, 15);
-        panel_3.add(samplingevent1);
-
-        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
-        samplingevent2.setBounds(6, 55, 149, 15);
-        panel_3.add(samplingevent2);
-
-        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
-        samplingevent3.setBounds(6, 75, 137, 15);
-        panel_3.add(samplingevent3);
-
-        JCheckBox samplingevent4 = new JCheckBox("Sampling Event 4");
-        samplingevent4.setBounds(157, 32, 127, 21);
-        panel_3.add(samplingevent4);
-
-        JCheckBox samplingevent5 = new JCheckBox("Sampling Event 5");
-        samplingevent5.setBounds(157, 52, 136, 21);
-        panel_3.add(samplingevent5);
-
-        JCheckBox samplingevent6 = new JCheckBox("Sampling Event 6");
-        samplingevent6.setBounds(157, 72, 136, 21);
-        panel_3.add(samplingevent6);
-
-        JButton save = new JButton("Save");
-        save.setBounds(239, 694, 85, 21);
-        panel.add(save);
+        commonnametextfield.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int key = e.getKeyCode();
+                if (key == 10){
+                    gtextfield.requestFocus();
+                }
+            }
+        });
 
         save.addActionListener(e -> {
             int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to add this record?", "Add Record",
@@ -497,39 +722,53 @@ public class Admin extends JFrame{
             frame.setVisible(false);
         });
 
-        JButton back = new JButton("Back");
-        back.setBounds(10, 694, 85, 21);
+
+        // Component placement
+        frame.getContentPane().add(welcome, BorderLayout.NORTH);
+        panel.setLayout(null);
+        panel.add(panel_1);
+        panel_1.setLayout(null);
+        panel_1.add(commonnamelable);
+        panel_1.add(commonnametextfield);
+        panel_1.add(glable);
+        panel_1.add(gtextfield);
+        panel_1.add(slable);
+        panel_1.add(Photo);
+        panel_1.add(browse);
+        panel_1.add(l);
+        panel_1.add(stextfield);
+        panel_1.add(imagelable);
+        panel.add(panel_2);
+
+        panel_2.setLayout(null);
+        panel_2.add(stemlable);
+        //panel_2.add(stemtextarea);
+        panel_2.add(stemscroll);
+        panel_2.add(leaflable);
+        //panel_2.add(leafta);
+        panel_2.add(leafscroll);
+        panel.add(panel_3);
+
+        panel_3.setLayout(null);
+        panel_3.add(lblNewLabel);
+        panel_3.add(samplingevent1);
+        panel_3.add(samplingevent2);
+        panel_3.add(samplingevent3);
+        panel_3.add(samplingevent4);
+        panel_3.add(samplingevent5);
+        panel_3.add(samplingevent6);
+
+        panel.add(save);
         panel.add(back);
-
-        JButton help = new JButton("help");
-        help.setBounds(169, 694, 60, 21);
-
-        help.addActionListener(e -> {
-            String message =
-                    "Sapling event:             location;                                           date;           time\n" +
-                    "Sampling event 1:          Kubah National Park;                  2020-07-01;     17:08:04\n" +
-                    "Sampling event 2:          Bako National;                          2020-07-03;     09:08:04\n" +
-                    "Sampling event 1:          Mount Santubong;                    2020-07-01;     07:09:13\n" +
-                    "Sampling event 1:          Maludam National Park;            2020-06-18;     08:43:29\n" +
-                    "Sampling event 1:          Kubah National Park;                2020-06-10;     10:43:29\n" +
-                    "Sampling event 1:          Maludam National Park;            2020-07-07;     13:45:40\n";
-            JOptionPane.showMessageDialog(null, message);
-        });
-
         panel.add(help);
-
-        back.addActionListener(e -> {
-            mainmenu();
-            frame.setVisible(false);
-        });
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
 
-
-
     public void displayrecord(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 1218, 451);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -539,30 +778,18 @@ public class Admin extends JFrame{
         lblNewLabel.setBounds(0, 10, 1204, 30);
         lblNewLabel.setFont(new Font("Arial", Font.PLAIN, 25));
         lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        frame.getContentPane().add(lblNewLabel);
 
         JPanel panel_1 = new JPanel();
         panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Records", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         panel_1.setBounds(10, 51, 815, 317);
         frame.getContentPane().add(panel_1);
-        panel_1.setLayout(null);
 
         JScrollPane scrollPane_1 = new JScrollPane();
         scrollPane_1.setBounds(10, 15, 795, 292);
-        panel_1.add(scrollPane_1);
 
         table = new JTable();
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int i = table.getSelectedRow();
-
-                byte[] img = (specimenList().get(i).getPhoto());
-                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagetable.getWidth(), imagetable.getHeight(), Image.SCALE_SMOOTH));
-                imagetable.setIcon(imageIcon);
-            }
-        });
         scrollPane_1.setViewportView(table);
+
         table.setModel(new DefaultTableModel(
                 new Object[][] {
                 },
@@ -570,7 +797,7 @@ public class Admin extends JFrame{
                         "Specimen Id", "Common Name", "Genus", "Species", "Stem", "Leaf"
                 }
         ) {
-            Class[] columnTypes = new Class[] {
+            final Class[] columnTypes = new Class[] {
                     String.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class
             };
             public Class getColumnClass(int columnIndex) {
@@ -582,62 +809,176 @@ public class Admin extends JFrame{
         table.setDefaultRenderer(String.class, centerRenderer);
         table.getColumnModel().getColumn(0).setPreferredWidth(90);
 
-
-        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
+        imagetable = new JLabel("Pictures");
+        imagetable.setBounds(10, 23, 339, 285);
 
         JButton back = new JButton("back");
         back.setBounds(554, 378, 98, 21);
-        frame.getContentPane().add(back);
 
         JPanel imagepanel = new JPanel();
         imagepanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Pictures", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         imagepanel.setBounds(835, 50, 359, 318);
-        frame.getContentPane().add(imagepanel);
-        imagepanel.setLayout(null);
 
-        imagetable = new JLabel("Pictures");
-        imagetable.setBounds(10, 23, 339, 285);
-        imagepanel.add(imagetable);
+
+        // Event handler
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int i = table.getSelectedRow();
+
+                byte[] img = (specimenList().get(i).getPhoto());
+                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagetable.getWidth(), imagetable.getHeight(), Image.SCALE_SMOOTH));
+                imagetable.setIcon(imageIcon);
+            }
+        });
 
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
 
+
+        // Component Placement
+        frame.getContentPane().add(lblNewLabel);
+
+        panel_1.setLayout(null);
+        panel_1.add(scrollPane_1);
+
+        centerRenderer.setHorizontalAlignment( JLabel.CENTER );
+
+        frame.getContentPane().add(back);
+        frame.getContentPane().add(imagepanel);
+
+        imagepanel.setLayout(null);
+        imagepanel.add(imagetable);
+
+        // Use to update the table from database when load the displayrecord
         show_specimen();
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
 
-
     public void editrecord(){
 
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 348, 771);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel welcome = new JLabel("Please enter the details to add record");
         welcome.setHorizontalAlignment(SwingConstants.CENTER);
-        frame.getContentPane().add(welcome, BorderLayout.NORTH);
 
         JPanel panel = new JPanel();
         frame.getContentPane().add(panel, BorderLayout.CENTER);
-        panel.setLayout(null);
 
         JPanel panel_1 = new JPanel();
         panel_1.setBounds(10, 52, 314, 246);
-        panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel.add(panel_1);
-        panel_1.setLayout(null);
+        panel_1.setBorder(new TitledBorder(null, "Specimen Details", TitledBorder.LEADING, TitledBorder.TOP,
+                null, null));
 
         JLabel commonnamelable = new JLabel("Common Name");
         commonnamelable.setBounds(6, 15, 146, 21);
-        panel_1.add(commonnamelable);
 
         JTextField stextfield = new JTextField(recordvalue[2]);
+        stextfield.setBounds(109, 71, 199, 19);
+        stextfield.setColumns(10);
 
         JTextField gtextfield = new JTextField(recordvalue[1]);
+        gtextfield.setBounds(109, 41, 199, 21);
+        gtextfield.setColumns(10);
+
+        JTextField commonnametextfield = new JTextField(recordvalue[0]);
+        commonnametextfield.setBounds(109, 15, 199, 21);
+        commonnametextfield.setColumns(10);
+
+        JLabel glable = new JLabel("Genus");
+        glable.setBounds(6, 41, 146, 21);
+
+        JLabel slable = new JLabel("species");
+        slable.setBounds(6, 67, 146, 26);
+
+        JLabel photo = 	new JLabel("Photo");
+        photo.setBounds(6, 107, 45, 13);
+
+        JLabel l = new JLabel();
+        l.setBounds(107, 129, 106, 13);
+
+        JButton btnNewButton = new JButton("browse");
+        btnNewButton.setBounds(109, 103, 85, 21);
+
+        imageedit = new JLabel("");
+        imageedit.setIcon(editimage);
+        imageedit.setBounds(109, 129, 117, 107);
+
+        JPanel panel_2 = new JPanel();
+        panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_2.setBounds(10, 308, 314, 265);
+        panel_2.setLayout(null);
+
+        JLabel stemlable = new JLabel("Stem");
+        stemlable.setBounds(10, 62, 41, 13);
+
+        JTextArea leafta = new JTextArea(recordvalue[4]);
+        leafta.setLineWrap(true);
+        leafta.setBounds(110, 147, 194, 97);
+
+        JTextArea stemta = new JTextArea(recordvalue[3]);
+        stemta.setLineWrap(true);
+        stemta.setBounds(161, 41, 143, 97);
+
+        JScrollPane stemscroll = new JScrollPane(stemta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        stemscroll.setBounds(110, 30, 194, 97);
+
+        JLabel leaflable = new JLabel("Leaf");
+        leaflable.setBounds(10, 186, 45, 13);
+
+        JScrollPane leafscroll = new JScrollPane(leafta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        leafscroll.setBounds(110, 147, 194, 97);
+
+        JPanel panel_3 = new JPanel();
+        panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_3.setBounds(10, 583, 314, 97);
+        panel_3.setLayout(null);
+
+        JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
+        lblNewLabel.setBounds(6, 15, 299, 15);
+
+        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
+        samplingevent1.setBounds(6, 35, 146, 15);
+
+        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
+        samplingevent2.setBounds(6, 55, 146, 15);
+
+        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
+        samplingevent3.setBounds(6, 75, 146, 15);
+
+        JCheckBox samplingevent4 = new JCheckBox("Sampling Event 4");
+        samplingevent4.setBounds(163, 32, 142, 21);
+
+        JCheckBox samplingevent6 = new JCheckBox("Sampling Event 6");
+        samplingevent6.setBounds(163, 72, 142, 21);
+
+        JCheckBox samplingevent5 = new JCheckBox("Sampling Event 5");
+        samplingevent5.setBounds(163, 52, 142, 21);
+
+        JButton update = new JButton("Update");
+        update.setBounds(239, 690, 85, 21);
+
+        JButton back = new JButton("Back");
+        back.setBounds(10, 690, 85, 21);
+
+        //comboBox.setSelectedIndex(valuecombobox);
+        comboBox.setBounds(21, 21, 198, 21);
+
+        JButton apply = new JButton("Apply");
+        apply.setBounds(229, 21, 85, 21);
+
+        JButton btnNewButton_1 = new JButton("help");
+        btnNewButton_1.setBounds(166, 690, 63, 21);
+
+
+        // Event Handler
         gtextfield.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -645,9 +986,9 @@ public class Admin extends JFrame{
                 if (key == 10){
                     stextfield.requestFocus();
                 }
-            }});
+            }
+        });
 
-        JTextField commonnametextfield = new JTextField(recordvalue[0]);
         commonnametextfield.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -657,30 +998,7 @@ public class Admin extends JFrame{
                 }
             }
         });
-        commonnametextfield.setBounds(109, 15, 199, 21);
-        panel_1.add(commonnametextfield);
-        commonnametextfield.setColumns(10);
 
-        JLabel glable = new JLabel("Genus");
-        glable.setBounds(6, 41, 146, 21);
-        panel_1.add(glable);
-
-        gtextfield.setBounds(109, 41, 199, 21);
-        panel_1.add(gtextfield);
-        gtextfield.setColumns(10);
-
-        JLabel slable = new JLabel("species");
-        slable.setBounds(6, 67, 146, 26);
-        panel_1.add(slable);
-
-        JLabel Photo = 	new JLabel("Photo");
-        Photo.setBounds(6, 107, 45, 13);
-        panel_1.add(Photo);
-
-        JLabel l = new JLabel();
-        l.setBounds(107, 129, 106, 13);
-
-        JButton btnNewButton = new JButton("browse");
         btnNewButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 // create an object of JFileChooser class
@@ -701,98 +1019,28 @@ public class Admin extends JFrame{
                     l.setText("the user cancelled the operation");
             }
         });
-        btnNewButton.setBounds(109, 103, 85, 21);
-        panel_1.add(btnNewButton);
 
-        panel_1.add(l);
-
-        stextfield.setBounds(109, 71, 199, 19);
-        panel_1.add(stextfield);
-        stextfield.setColumns(10);
-
-        imageedit = new JLabel("");
-        imageedit.setIcon(editimage);
-        imageedit.setBounds(109, 129, 117, 107);
-        panel_1.add(imageedit);
-
-        JPanel panel_2 = new JPanel();
-        panel_2.setBorder(new TitledBorder(null, "Characteristics", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(10, 308, 314, 265);
-        panel.add(panel_2);
-        panel_2.setLayout(null);
-
-        JLabel stemlable = new JLabel("Stem");
-        stemlable.setBounds(10, 62, 41, 13);
-        panel_2.add(stemlable);
-
-        JTextArea leafta = new JTextArea(recordvalue[4]);
-
-        JTextArea stemta = new JTextArea(recordvalue[3]);
         stemta.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
                 if (key == 10){
                     leafta.requestFocus();
-                }}
+                }
+            }
         });
-        stemta.setLineWrap(true);
-        stemta.setBounds(161, 41, 143, 97);
-        panel_2.add(stemta);
 
-        JScrollPane stemscroll = new JScrollPane(stemta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        stemscroll.setBounds(110, 30, 194, 97);
-        panel_2.add(stemscroll);
-
-        JLabel leaflable = new JLabel("Leaf");
-        leaflable.setBounds(10, 186, 45, 13);
-        panel_2.add(leaflable);
-
-        leafta.setLineWrap(true);
-        leafta.setBounds(110, 147, 194, 97);
-        panel_2.add(leafta);
-
-        JScrollPane leafscroll = new JScrollPane(leafta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        leafscroll.setBounds(110, 147, 194, 97);
-        panel_2.add(leafscroll);
-
-        JPanel panel_3 = new JPanel();
-        panel_3.setBorder(new TitledBorder(null, "Sampling Event", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_3.setBounds(10, 583, 314, 97);
-        panel.add(panel_3);
-        panel_3.setLayout(null);
-
-        JLabel lblNewLabel = new JLabel("Please select at where this specimen was found");
-        lblNewLabel.setBounds(6, 15, 299, 15);
-        panel_3.add(lblNewLabel);
-
-        JCheckBox samplingevent1 = new JCheckBox("Sampling Event 1");
-        samplingevent1.setBounds(6, 35, 146, 15);
-        panel_3.add(samplingevent1);
-
-        JCheckBox samplingevent2 = new JCheckBox("Sampling Event 2");
-        samplingevent2.setBounds(6, 55, 146, 15);
-        panel_3.add(samplingevent2);
-
-        JCheckBox samplingevent3 = new JCheckBox("Sampling Event 3");
-        samplingevent3.setBounds(6, 75, 146, 15);
-        panel_3.add(samplingevent3);
-
-        JCheckBox samplingevent4 = new JCheckBox("Sampling Event 4");
-        samplingevent4.setBounds(163, 32, 142, 21);
-        panel_3.add(samplingevent4);
-
-        JCheckBox samplingevent6 = new JCheckBox("Sampling Event 6");
-        samplingevent6.setBounds(163, 72, 142, 21);
-        panel_3.add(samplingevent6);
-
-        JCheckBox samplingevent5 = new JCheckBox("Sampling Event 5");
-        samplingevent5.setBounds(163, 52, 142, 21);
-        panel_3.add(samplingevent5);
-
-        JButton update = new JButton("Update");
-        update.setBounds(239, 690, 85, 21);
-        panel.add(update);
+        btnNewButton_1.addActionListener(e -> {
+            String message =
+                    "Sapling event:             location;                                           date;           time\n" +
+                            "Sampling event 1:          Kubah National Park;                  2020-07-01;     17:08:04\n" +
+                            "Sampling event 2:          Bako National;                          2020-07-03;     09:08:04\n" +
+                            "Sampling event 1:          Mount Santubong;                    2020-07-01;     07:09:13\n" +
+                            "Sampling event 1:          Maludam National Park;            2020-06-18;     08:43:29\n" +
+                            "Sampling event 1:          Kubah National Park;                2020-06-10;     10:43:29\n" +
+                            "Sampling event 1:          Maludam National Park;            2020-07-07;     13:45:40\n";
+            JOptionPane.showMessageDialog(null, message);
+        });
 
         update.addActionListener(e -> {
             int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to update this record?", "Update Record",
@@ -802,7 +1050,7 @@ public class Admin extends JFrame{
                 int value = (int) comboBox.getSelectedItem();
 
                 if (!samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected() &&
-                !samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected()){
+                        !samplingevent1.isSelected() && !samplingevent2.isSelected() && !samplingevent3.isSelected()){
                     System.out.println("nice one");
                 }
                 else{
@@ -886,42 +1134,11 @@ public class Admin extends JFrame{
 
         });
 
-        JButton back = new JButton("Back");
-        back.setBounds(10, 690, 85, 21);
-        panel.add(back);
-
-        comboBox = new JComboBox();
-        //comboBox.setSelectedIndex(valuecombobox);
-        comboBox.setBounds(21, 21, 198, 21);
-        panel.add(comboBox);
-        updateCombo();
-
-        JButton apply = new JButton("Apply");
-        apply.setBounds(229, 21, 85, 21);
-        panel.add(apply);
-
-        JButton btnNewButton_1 = new JButton("help");
-        btnNewButton_1.setBounds(166, 690, 63, 21);
-
-        btnNewButton_1.addActionListener(e -> {
-            String message =
-                    "Sapling event:             location;                                           date;           time\n" +
-                            "Sampling event 1:          Kubah National Park;                  2020-07-01;     17:08:04\n" +
-                            "Sampling event 2:          Bako National;                          2020-07-03;     09:08:04\n" +
-                            "Sampling event 1:          Mount Santubong;                    2020-07-01;     07:09:13\n" +
-                            "Sampling event 1:          Maludam National Park;            2020-06-18;     08:43:29\n" +
-                            "Sampling event 1:          Kubah National Park;                2020-06-10;     10:43:29\n" +
-                            "Sampling event 1:          Maludam National Park;            2020-07-07;     13:45:40\n";
-            JOptionPane.showMessageDialog(null, message);
-        });
-        panel.add(btnNewButton_1);
-
         apply.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int value = (int) comboBox.getSelectedItem();
                 valuecombobox = comboBox.getSelectedIndex();
-
 
                 try {
                     Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
@@ -963,97 +1180,57 @@ public class Admin extends JFrame{
         });
 
 
+        // Component Placement
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
+        frame.getContentPane().add(welcome, BorderLayout.NORTH);
+
+        panel.setLayout(null);
+
+        panel.add(panel_1);
+        panel_1.setLayout(null);
+        panel_1.add(commonnamelable);
+        panel_1.add(commonnametextfield);
+        panel_1.add(glable);
+        panel_1.add(gtextfield);
+        panel_1.add(slable);
+        panel_1.add(photo);
+        panel_1.add(btnNewButton);
+        panel_1.add(l);
+        panel_1.add(stextfield);
+        panel_1.add(imageedit);
+
+        panel.add(panel_2);
+        panel_2.add(stemlable);
+        //panel_2.add(stemta);
+        panel_2.add(stemscroll);
+        panel_2.add(leaflable);
+        //panel_2.add(leafta);
+        panel_2.add(leafscroll);
+
+        panel.add(panel_3);
+        panel_3.add(lblNewLabel);
+        panel_3.add(samplingevent1);
+        panel_3.add(samplingevent2);
+        panel_3.add(samplingevent3);
+        panel_3.add(samplingevent4);
+        panel_3.add(samplingevent6);
+        panel_3.add(samplingevent5);
+
+        panel.add(update);
+        panel.add(back);
+        panel.add(comboBox);
+        panel.add(apply);
+        panel.add(btnNewButton_1);
+
+        // Outside function
+        // Use to automatically fill the field when the user click the apply button
+        updateCombo();
     }
 
-    public ArrayList<SpecimenSamplingList> search() {
-        ArrayList<SpecimenSamplingList> searchList = new ArrayList<>();
-
-        try {
-            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-            ResultSet resultSet = null;
-
-            if(!speciessearchtext.isEmpty() && !locationsearchtext.isEmpty()) {
-                String sql = "select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
-                        "where specimenevent.location = ? and specimen.species = ?";
-                PreparedStatement statement = myConn.prepareStatement(sql);
-
-                statement.setString(1, locationsearchtext);
-                statement.setString(2, speciessearchtext);
-
-                resultSet = statement.executeQuery();
-            }
-            else if(!speciessearchtext.isEmpty()){
-                String sql = "select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
-                "where specimen.species = ?";
-                PreparedStatement statement = myConn.prepareStatement(sql);
-
-                statement.setString(1, speciessearchtext);
-
-
-                resultSet = statement.executeQuery();
-            }
-            else{
-                String sql = "select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
-                        "where specimenevent.location = ?";
-                PreparedStatement statement = myConn.prepareStatement(sql);
-
-                statement.setString(1, locationsearchtext);
-
-
-                resultSet = statement.executeQuery();
-            }
-
-
-
-            SpecimenSamplingList specimenSampling;
-            while(resultSet.next()){
-                specimenSampling = new SpecimenSamplingList(resultSet.getString("location"), resultSet.getString("date"),
-                        resultSet.getString("time"), resultSet.getString("commonname"), resultSet.getString("genus"),
-                        resultSet.getString("species"), resultSet.getString("stem"), resultSet.getString("leaf"),
-                        resultSet.getInt("specimentakeid"), resultSet.getBytes("photo"));
-
-                searchList.add(specimenSampling);
-            }
-
-        }
-        catch (Exception e){
-            JOptionPane.showMessageDialog(null, "The data didn't exist in database");
-        }
-
-        return searchList;
-    }
-
-    public void showsearch() {
-        ArrayList<SpecimenSamplingList> list = search();
-        DefaultTableModel model = (DefaultTableModel) tablesampling.getModel();
-        Object[] row = new Object[9];
-
-        for (SpecimenSamplingList specimen : list) {
-            row[0] = specimen.getId();
-            row[1] = specimen.getCommonname();
-            row[2] = specimen.getGenus();
-            row[3] = specimen.getSpecies();
-            row[4] = specimen.getStem();
-            row[5] = specimen.getLeaf();
-            row[6] = specimen.getLocation();
-            row[7] = specimen.getDate();
-            row[8] = specimen.getTime();
-
-            model.addRow(row);
-        }
-    }
-
-
-    //TODO: add functionalities to search record
     public void searchrecord(){
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 1135, 614);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -1061,24 +1238,60 @@ public class Admin extends JFrame{
         JLabel lblNewLabel = new JLabel("Please enter what you want to search");
         lblNewLabel.setFont(new Font("Arial", Font.PLAIN, 19));
         lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        frame.getContentPane().add(lblNewLabel, BorderLayout.NORTH);
 
         JPanel panel = new JPanel();
         frame.getContentPane().add(panel, BorderLayout.CENTER);
-        panel.setLayout(null);
 
         JTextField speciessearch = new JTextField();
         speciessearch.setBounds(371, 24, 359, 19);
-        panel.add(speciessearch);
         speciessearch.setColumns(10);
 
         JTextField locationsearch = new JTextField();
         locationsearch.setBounds(371, 50, 359, 19);
-        panel.add(locationsearch);
         locationsearch.setColumns(10);
 
         JButton search = new JButton("Search");
         search.setBounds(744, 49, 85, 21);
+
+        JButton back = new JButton("back");
+        back.setBounds(526, 523, 85, 21);
+
+        JLabel species = new JLabel("Species");
+        species.setHorizontalAlignment(SwingConstants.RIGHT);
+        species.setBounds(297, 27, 64, 13);
+
+        JLabel location = new JLabel("Location");
+        location.setHorizontalAlignment(SwingConstants.RIGHT);
+        location.setBounds(297, 53, 64, 13);
+
+        JPanel panel_1 = new JPanel();
+        panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Record", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+        panel_1.setBounds(4, 76, 673, 441);
+
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setBounds(10, 15, 653, 416);
+
+        JPanel panel_2 = new JPanel();
+        panel_2.setBorder(new TitledBorder(null, "Photo", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_2.setBounds(688, 76, 429, 441);
+        panel_2.setLayout(null);
+
+        imagesummary = new JLabel("");
+        imagesummary.setBounds(10, 22, 409, 405);
+
+        tablesampling = new JTable();
+
+        tablesampling.setModel(new DefaultTableModel(
+                new Object[][] {
+                },
+                new String[] {
+                        "ID", "Common Name", "Genus", "Species", "Stem", "Leaf", "Location", "Date", "Time"
+                }
+        ));
+        scrollPane.setViewportView(tablesampling);
+
+
+        // Event handler
         search.addActionListener(e -> {
             locationsearchtext = locationsearch.getText();
             speciessearchtext = speciessearch.getText();
@@ -1088,44 +1301,10 @@ public class Admin extends JFrame{
 
         });
 
-        panel.add(search);
-
-        JButton back = new JButton("back");
-        back.setBounds(526, 523, 85, 21);
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
-
-        panel.add(back);
-
-        JLabel species = new JLabel("Species");
-        species.setHorizontalAlignment(SwingConstants.RIGHT);
-        species.setBounds(297, 27, 64, 13);
-        panel.add(species);
-
-        JLabel location = new JLabel("Location");
-        location.setHorizontalAlignment(SwingConstants.RIGHT);
-        location.setBounds(297, 53, 64, 13);
-        panel.add(location);
-
-        JPanel panel_1 = new JPanel();
-        panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Record", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-        panel_1.setBounds(4, 76, 673, 441);
-        panel.add(panel_1);
-        panel_1.setLayout(null);
-
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setBounds(10, 15, 653, 416);
-        panel_1.add(scrollPane);
-
-        JPanel panel_2 = new JPanel();
-
-        imagesummary = new JLabel("");
-        imagesummary.setBounds(10, 22, 409, 405);
-        panel_2.add(imagesummary);
-
-        tablesampling = new JTable();
 
         tablesampling.addMouseListener(new MouseAdapter() {
             @Override
@@ -1138,51 +1317,38 @@ public class Admin extends JFrame{
             }
         });
 
-        tablesampling.setModel(new DefaultTableModel(
-                new Object[][] {
-                },
-                new String[] {
-                        "ID", "Common Name", "Genus", "Species", "Stem", "Leaf", "Location", "Date", "Time"
-                }
-        ));
-        scrollPane.setViewportView(tablesampling);
 
-        panel_2.setBorder(new TitledBorder(null, "Photo", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_2.setBounds(688, 76, 429, 441);
+        // Component Placement
+        frame.getContentPane().add(lblNewLabel, BorderLayout.NORTH);
+
+        panel.setLayout(null);
+        panel.add(speciessearch);
+        panel.add(locationsearch);
+        panel.add(search);
+        panel.add(back);
+        panel.add(species);
+        panel.add(location);
+
+        panel.add(panel_1);
+        panel_1.setLayout(null);
+        panel_1.add(scrollPane);
+        panel_2.add(imagesummary);
+
         panel.add(panel_2);
-        panel_2.setLayout(null);
 
-        if (!speciessearchtext.isEmpty() || !locationsearchtext.isEmpty()){
-            showsearch();
-        }
-
-
+        frame.getRootPane().setDefaultButton(search);
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
+
+        //outside funtion
+        // will show the data inside table if and only if there's a query made
+        if (!speciessearchtext.isEmpty() || !locationsearchtext.isEmpty())
+            showsearch();
     }
-
-
-    public void updateCombo(){
-        try {
-            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-            PreparedStatement pst = myConn.prepareStatement("select * from specimen");
-
-            ResultSet resultSet = pst.executeQuery();
-
-            while (resultSet.next())
-                comboBox.addItem(resultSet.getInt("specimenid"));
-
-            comboBox.setSelectedIndex(valuecombobox);
-        }catch (SQLException sq){
-            JOptionPane.showMessageDialog(null, sq);
-        } catch (IllegalArgumentException iae){
-            System.out.println("nani");
-        }
-    }
-
-
 
     public void deleteRecord() {
+
+        // Component Declaration
         JFrame frame = new JFrame();
         frame.setBounds(100, 100, 1079, 606);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -1190,11 +1356,9 @@ public class Admin extends JFrame{
 
         comboBox = new JComboBox();
         comboBox.setBounds(31, 107, 255, 25);
-        frame.getContentPane().add(comboBox);
 
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setBounds(342, 10, 713, 549);
-        frame.getContentPane().add(scrollPane);
 
         table = new JTable();
         scrollPane.setViewportView(table);
@@ -1206,7 +1370,7 @@ public class Admin extends JFrame{
                         "Specimen Id", "Common Name", "Genus", "Species", "Stem", "Leaf"
                 }
         ) {
-            Class[] columnTypes = new Class[] {
+            final Class[] columnTypes = new Class[] {
                     String.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class
             };
             public Class getColumnClass(int columnIndex) {
@@ -1214,17 +1378,20 @@ public class Admin extends JFrame{
             }
         });
 
-        show_specimen();
-        updateCombo();
-
         JLabel lblNewLabel = new JLabel("SpecimenId");
         lblNewLabel.setBounds(31, 84, 92, 13);
-        frame.getContentPane().add(lblNewLabel);
 
         JButton delete = new JButton("Delete");
         delete.setBounds(201, 538, 85, 21);
-        frame.getContentPane().add(delete);
 
+        JButton back = new JButton("Back");
+        back.setBounds(99, 538, 85, 21);
+
+        JLabel lblNewLabel_1 = new JLabel("Please select specimenId to delete the said record");
+        lblNewLabel_1.setBounds(31, 10, 335, 41);
+
+
+        // Event Handler
         delete.addActionListener(e -> {
             int input = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this record?", "Delete Record",
                     JOptionPane.OK_CANCEL_OPTION);
@@ -1245,7 +1412,7 @@ public class Admin extends JFrame{
                                 "Specimen Id", "Common Name", "Genus", "Species", "Photo", "Stem", "Leaf"
                         }
                 ) {
-                    Class[] columnTypes = new Class[] {
+                    final Class[] columnTypes = new Class[] {
                             String.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class, Object.class
                     };
                     public Class getColumnClass(int columnIndex) {
@@ -1256,111 +1423,35 @@ public class Admin extends JFrame{
                 JOptionPane.showMessageDialog(null, "The record has been deleted!");
 
                 show_specimen();
-                deleteRecord();
-                frame.setVisible(false);
             }
-            else{
-                deleteRecord();
-                frame.setVisible(false);
-            }
+
+            deleteRecord();
+            frame.setVisible(false);
 
         });
-
-        JButton back = new JButton("Back");
-        back.setBounds(99, 538, 85, 21);
-        frame.getContentPane().add(back);
 
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
 
-        JLabel lblNewLabel_1 = new JLabel("Please select specimenId to delete the said record");
-        lblNewLabel_1.setBounds(31, 10, 335, 41);
-        frame.getContentPane().add(lblNewLabel_1);
 
+        // Component Placement
+        frame.getContentPane().add(comboBox);
+        frame.getContentPane().add(scrollPane);
+        frame.getContentPane().add(lblNewLabel);
+        frame.getContentPane().add(delete);
+        frame.getContentPane().add(back);
+        frame.getContentPane().add(lblNewLabel_1);
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
-    }
 
 
-    public ArrayList<SpecimenSamplingList> specimenSamplingList() {
-        ArrayList<SpecimenSamplingList> specimensamplinglist = new ArrayList<>();
-
-        try {
-            Connection myConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/Palm?serverTimezone=UTC", "root", "");
-            Statement statement = myConn.createStatement();
-            ResultSet resultSet = null;
-
-            if(combosummary.equals("Kubah National Park")){
-                resultSet = statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Kubah National Park'");
-            }
-            else if(combosummary.equals("Bako National Park")){
-                resultSet = statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Bako National Park'");
-            }
-            else if(combosummary.equals("Maludam National Park")) {
-                resultSet = statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Maludam '");
-            }
-            else if(combosummary.equals("Mount Santubong")) {
-                resultSet = statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.location = 'Mount Santubong'");
-            }
-            else{
-                resultSet = statement.executeQuery("select * " +
-                        "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                        "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
-            }
-
-
-
-            SpecimenSamplingList specimenSampling;
-            while(resultSet.next()){
-                specimenSampling = new SpecimenSamplingList(resultSet.getString("location"), resultSet.getString("date"),
-                        resultSet.getString("time"), resultSet.getString("commonname"), resultSet.getString("genus"),
-                        resultSet.getString("species"), resultSet.getString("stem"), resultSet.getString("leaf"),
-                        resultSet.getInt("specimentakeid"), resultSet.getBytes("photo"));
-
-                specimensamplinglist.add(specimenSampling);
-            }
-
-        }
-        catch (Exception e){
-            JOptionPane.showMessageDialog(null, e);
-        }
-
-        return specimensamplinglist;
-    }
-
-
-    public void showspecimensampling() {
-        ArrayList<SpecimenSamplingList> list = specimenSamplingList();
-        DefaultTableModel model = (DefaultTableModel) tablesampling.getModel();
-        Object[] row = new Object[9];
-
-        for (SpecimenSamplingList specimen : list) {
-            row[0] = specimen.getId();
-            row[1] = specimen.getCommonname();
-            row[2] = specimen.getGenus();
-            row[3] = specimen.getSpecies();
-            row[4] = specimen.getStem();
-            row[5] = specimen.getLeaf();
-            row[6] = specimen.getLocation();
-            row[7] = specimen.getDate();
-            row[8] = specimen.getTime();
-
-            model.addRow(row);
-        }
+        // Outside function
+        // Use to show data inside table
+        show_specimen();
+        // Use to update the value inside combobox
+        updateCombo();
     }
 
     public void generateSummary(){
@@ -1371,7 +1462,6 @@ public class Admin extends JFrame{
 
         JLabel lblNewLabel = new JLabel("filter location:");
         lblNewLabel.setBounds(21, 31, 91, 27);
-        frame.getContentPane().add(lblNewLabel);
 
         JComboBox comboBoxsummary = new JComboBox();
         comboBoxsummary.addItem("no filter");
@@ -1379,34 +1469,20 @@ public class Admin extends JFrame{
         comboBoxsummary.addItem("Bako National Park");
         comboBoxsummary.addItem("Maludam National Park");
         comboBoxsummary.addItem("Mount Santubong");
-
         comboBoxsummary.setBounds(108, 30, 164, 29);
-        frame.getContentPane().add(comboBoxsummary);
 
         JPanel panel = new JPanel();
         panel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Summary", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         panel.setBounds(372, 20, 866, 393);
-        frame.getContentPane().add(panel);
         panel.setLayout(null);
 
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setBounds(10, 15, 846, 368);
-        panel.add(scrollPane);
 
         imagesummary = new JLabel("");
         imagesummary.setBounds(6, 15, 346, 297);
 
         tablesampling = new JTable();
-        tablesampling.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int i = tablesampling.getSelectedRow();
-
-                byte[] img = (specimenSamplingList().get(i).getPhoto());
-                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagesummary.getWidth(), imagesummary.getHeight(), Image.SCALE_SMOOTH));
-                imagesummary.setIcon(imageIcon);
-            }
-        });
         tablesampling.setModel(new DefaultTableModel(
                 new Object[][] {
                 },
@@ -1419,14 +1495,27 @@ public class Admin extends JFrame{
         JPanel panel_1 = new JPanel();
         panel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Pictures", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         panel_1.setBounds(21, 82, 341, 331);
-        frame.getContentPane().add(panel_1);
         panel_1.setLayout(null);
-
-        panel_1.add(imagesummary);
 
         JButton apply = new JButton("apply");
         apply.setBounds(277, 31, 78, 27);
-        frame.getContentPane().add(apply);
+
+        JButton back = new JButton("Back");
+        back.setVerticalAlignment(SwingConstants.BOTTOM);
+        back.setBounds(547, 434, 85, 21);
+
+
+        // Event Handler
+        tablesampling.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int i = tablesampling.getSelectedRow();
+
+                byte[] img = (specimenSamplingList().get(i).getPhoto());
+                ImageIcon imageIcon = new ImageIcon(new ImageIcon(img).getImage().getScaledInstance(imagesummary.getWidth(), imagesummary.getHeight(), Image.SCALE_SMOOTH));
+                imagesummary.setIcon(imageIcon);
+            }
+        });
 
         apply.addActionListener(e -> {
             combosummary = (String) comboBoxsummary.getSelectedItem();
@@ -1435,20 +1524,35 @@ public class Admin extends JFrame{
             frame.setVisible(false);
         });
 
-        JButton back = new JButton("Back");
-        back.setVerticalAlignment(SwingConstants.BOTTOM);
-        back.setBounds(547, 434, 85, 21);
-        frame.getContentPane().add(back);
-
         back.addActionListener(e -> {
             mainmenu();
             frame.setVisible(false);
         });
 
-        showspecimensampling();
+
+        // Component Placement
+        frame.getContentPane().add(lblNewLabel);
+        frame.getContentPane().add(comboBoxsummary);
+        frame.getContentPane().add(panel);
+
+        panel.add(scrollPane);
+
+        frame.getContentPane().add(panel_1);
+
+        panel_1.add(imagesummary);
+
+        frame.getContentPane().add(apply);
+        frame.getContentPane().add(back);
 
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
+
+
+        // Outside funtion
+        // Used to fill the data in table
+        showspecimensampling();
     }
+
+    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 }
 

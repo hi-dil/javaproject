@@ -3,10 +3,14 @@
     <words>
       <w>adminpassword</w>
       <w>centerpanel</w>
+      <w>editimage</w>
+      <w>imageedit</w>
       <w>imagelable</w>
+      <w>imagesummary</w>
       <w>imagetable</w>
       <w>recordvalue</w>
       <w>specimenimage</w>
+      <w>valuecombobox</w>
       <w>welcomelable</w>
     </words>
   </dictionary>
