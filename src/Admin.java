@@ -212,13 +212,15 @@ public class Admin extends JFrame{
                     Statement statement = myConn.createStatement();
                     resultSet = statement.executeQuery("select * " +
                             "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                            "Order by specimentake.specimentakeid");
                 }
                 else{
                     String sql = "select * " +
                             "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
                             "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                            "where specimenevent.location = ?";
+                            "where specimenevent.location = ?" +
+                            "Order by specimentake.specimentakeid";
 
                     PreparedStatement statement = myConn.prepareStatement(sql);
                     statement.setString(1, combosummary);
@@ -231,13 +233,15 @@ public class Admin extends JFrame{
                     Statement statement = myConn.createStatement();
                     resultSet = statement.executeQuery("select * " +
                             "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
-                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)");
+                            "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid)" +
+                            "Order by specimentake.specimentakeid");
                 }
                 else{
                     String sql = "select * " +
                             "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
                             "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                            "where specimenevent.date = ?";
+                            "where specimenevent.date = ?" +
+                            "Order by specimentake.specimentakeid";
 
                     PreparedStatement statement = myConn.prepareStatement(sql);
                     statement.setString(1, comboboxdatesummary);
@@ -249,7 +253,8 @@ public class Admin extends JFrame{
                 String sql = "select * " +
                         "from ((specimentake inner join specimen on specimentake.specimenid = specimen.specimenid) " +
                         "inner join specimenevent on specimentake.specimeneventid = specimenevent.specimeneventid) " +
-                        "where specimenevent.date = ? and specimenevent.location = ?";
+                        "where specimenevent.date = ? and specimenevent.location = ?" +
+                        "Order by specimentake.specimentakeid";
 
                 PreparedStatement statement = myConn.prepareStatement(sql);
                 statement.setString(1, comboboxdatesummary);
@@ -475,7 +480,7 @@ public class Admin extends JFrame{
         JButton summary = new JButton("Generate Summary");
         summary.setBounds(80, 346, 193, 32);
 
-        JButton editRecord = new JButton("EditRecord");
+        JButton editRecord = new JButton("Edit Record");
         editRecord.setBounds(80, 192, 193, 32);
 
 
@@ -583,10 +588,12 @@ public class Admin extends JFrame{
 
         JTextArea leafta = new JTextArea();
         leafta.setLineWrap(true);
+        leafta.setWrapStyleWord(true);
         leafta.setBounds(110, 147, 194, 97);
 
         JTextArea stemtextarea = new JTextArea();
         stemtextarea.setLineWrap(true);
+        stemtextarea.setWrapStyleWord(true);
         stemtextarea.setBounds(161, 41, 143, 97);
 
         JScrollPane stemscroll = new JScrollPane(stemtextarea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -639,7 +646,7 @@ public class Admin extends JFrame{
                 // create an object of JFileChooser class
                 JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
                 FileNameExtensionFilter filter = new FileNameExtensionFilter("*.Images", "jpg", "gif", "png");
-                j.addChoosableFileFilter(filter);
+                j.setFileFilter(filter);
 
                 // invoke the showsOpenDialog function to show the save dialog
                 int r = j.showOpenDialog(null);
@@ -951,7 +958,7 @@ public class Admin extends JFrame{
         frame.setBounds(100, 100, 348, 771);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        JLabel welcome = new JLabel("Please enter the details to add record");
+        JLabel welcome = new JLabel("Please enter the details to edit record");
         welcome.setHorizontalAlignment(SwingConstants.CENTER);
 
         JPanel panel = new JPanel();
@@ -1006,10 +1013,12 @@ public class Admin extends JFrame{
 
         JTextArea leafta = new JTextArea(recordvalue[4]);
         leafta.setLineWrap(true);
+        leafta.setWrapStyleWord(true);
         leafta.setBounds(110, 147, 194, 97);
 
         JTextArea stemta = new JTextArea(recordvalue[3]);
         stemta.setLineWrap(true);
+        stemta.setWrapStyleWord(true);
         stemta.setBounds(161, 41, 143, 97);
 
         JScrollPane stemscroll = new JScrollPane(stemta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
